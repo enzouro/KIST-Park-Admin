@@ -1,13 +1,38 @@
+import { FieldErrors, UseFormHandleSubmit, Control, UseFormRegister } from 'react-hook-form';
+import { CreateResponse, UpdateResponse } from '@pankod/refine-react-hook-form';
 import { ReactNode } from 'react';
 
-export interface HighlightsFormProps{
-  type: string,
-  register: any,
-  control,
-  onFinish: (values: FieldValues) => Promise<void | CreateResponse<BaseRecord> | UpdateResponse<BaseRecord>>,
-  formLoading: boolean,
-  handleSubmit: FormEventHandler<HTMLFormElement> | undefined,
-  onFinishHandler: (data: FieldValues) => Promise<void>,
-  initialValues?: Record<string, any>;
+export interface HighlightsFormValues {
+  seq: number;
+  createdAt: string;
+  title: string;
+  date: string;
+  location: string;
+  sdg: string[] | string;
+  content: string;
+  images: any[]; // Array of image URLs or objects
+  status: 'draft' | 'published' | 'rejected';
+  email?: string;
+}
 
+export interface HighlightsFormProps {
+  type: 'Create' | 'Edit'; // The component expects 'type' prop
+  initialValues?: any; // The form's initial values
+  onFinishHandler: (data: HighlightsFormValues) => Promise<void>;
+  handleSubmit: UseFormHandleSubmit<any>;
+  register: UseFormRegister<any>;
+  control: Control<any>;
+  errors: FieldErrors<any>;
+  user: any; // The user object from useGetIdentity
+}
+
+export interface CustomButtonProps {
+    type?: string,
+    title: string,
+    backgroundColor: string,
+    color: string,
+    fullWidth?: boolean,
+    icon?: ReactNode,
+    disabled?: boolean,
+    handleClick?: () => void
 }

@@ -38,8 +38,10 @@ import {
 import React from 'react';
 import UserManagement from 'pages/user-management';
 import { UnauthorizedPage } from 'pages/unauthorized';
+
 import AllHighlights from 'pages/all-highlights';
 import CreateHighlights from 'pages/create-highlights';
+import EditHighlights from 'pages/edit-highlights';
 
 const axiosInstance = axios.create();
 axiosInstance.interceptors.request.use((request: AxiosRequestConfig) => {
@@ -182,46 +184,7 @@ const App = () => {
   };
   
 
-  const generateResources = () => {
-    const baseResources = [
-      {
-        name: 'highlights',
-        list: AllHighlights,
-        create: CreateHighlights,
-        icon: <Star />,
-      },
-      {
-        name: 'properties', // LINK
-        list: AllProperties,
-        show: PropertyDetails,
-        create: CreateProperty,
-        edit: EditProperty,
-        icon: <VillaOutlined />,
-      },
-
-      {
-        name: 'review', // LINK
-        list: Home,
-        icon: <StarOutlineRounded />,
-      },
-      {
-        name: 'message', // LINK
-        list: Home,
-        icon: <ChatBubbleOutline />,
-      },
-      
-    ];
-
-    // Add user management resource only for admin users
-    if (isAdmin) {
-      baseResources.push({
-        name: 'user-management',
-        list: UserManagement,
-        icon: <ManageAccounts />,
-      });
-    }
-    return baseResources;
-  };
+  
 
   return (
     <ColorModeContextProvider>
@@ -233,7 +196,29 @@ const App = () => {
           notificationProvider={notificationProvider}
           ReadyPage={ReadyPage}
           catchAll={<ErrorComponent />}
-          resources={generateResources()}
+          resources={[
+            {
+              name: 'highlights',
+              list: AllHighlights,
+              create: CreateHighlights,
+              edit: EditHighlights,
+              icon: <Star />,
+            },
+            {
+              name: 'properties',
+              list: AllProperties,
+              show: PropertyDetails,
+              create: CreateProperty,
+              edit: EditProperty,
+              icon: <VillaOutlined />,
+            },
+            // Admin-only resource
+            ...(isAdmin ? [{
+              name: 'user-management',
+              list: UserManagement,
+              icon: <ManageAccounts />,
+            }] : []),
+          ]}
           Title={Title}
           Sider={Sider}
           Layout={Layout}

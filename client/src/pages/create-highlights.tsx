@@ -1,49 +1,54 @@
-// src/pages/create-sale.tsx
 import React from 'react';
 import { useNavigate } from "react-router-dom";
+import { useGetIdentity } from '@pankod/refine-core';
+import { useForm } from '@pankod/refine-react-hook-form';
 
 import LoadingDialog from 'components/common/LoadingDialog';
 import ErrorDialog from 'components/common/ErrorDialog';
-import HighlightsForm from 'components/forms/HighlightsForm';
-import { useGetIdentity } from '@pankod/refine-core';
-import { FieldValues, useForm } from '@pankod/refine-react-hook-form';
-
-
+import HighlightsForm from 'components/highlights/HighlightsForm';
+import { HighlightsFormValues } from 'interfaces/forms';
 
 const CreateHighlights = () => {
   const navigate = useNavigate();
   const { data: user } = useGetIdentity();
-  const isError = false;
-
-
+  
+  // Use the typed useForm with explicitly typed methods
   const {
     refineCore: { onFinish, formLoading },
     register,
     handleSubmit,
-  } = useForm();
+    control,
+    formState: { errors }
+  } = useForm<HighlightsFormValues>({
+    refineCoreProps: {
+      resource: "highlights",
+      action: "create",
+      redirect: false,
+    },
+    defaultValues: {
+      seq: '',
+      createdAt: '',
+      title: '',
+      date: '',
+      location: '',
+      sdg: [], 
+      content: '',
+      images: [],
+      status: 'draft'
+    }
+  });
 
-  const onFinishHandler = async (data: FieldValues) => {
-    await onFinish({
-      ...data,
-      email: user.email,
-    });
+  const onFinishHandler = async (data: HighlightsFormValues) => {
+    await onFinish(data);
     navigate('/highlights');
   };
 
+  // Show loading dialog if form is loading
   if (formLoading) {
     return (
-      <LoadingDialog 
-        open={formLoading}
-        loadingMessage="Loading Highlights form..."
-      />
-    );
-  }
-
-  if (isError) {
-    return (
-      <ErrorDialog 
+      <LoadingDialog
         open={true}
-        errorMessage="Error loading Highlights form"
+        loadingMessage="Loading Highlights form..."
       />
     );
   }
@@ -51,15 +56,14 @@ const CreateHighlights = () => {
   return (
     <HighlightsForm
       type="Create"
-      control
       register={register}
-      onFinish={onFinish}
-      formLoading={formLoading}
+      control={control}
       handleSubmit={handleSubmit}
       onFinishHandler={onFinishHandler}
+      errors={errors}
+      user={user}
     />
   );
 };
 
 export default CreateHighlights;
-

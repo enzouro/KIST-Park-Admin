@@ -7,16 +7,11 @@ import EditProperty from './edit-property';
 
 
 export {
-
   AllProperties,
-
   CreateProperty,
-
   Home,
   Login,
-
   PropertyDetails,
-
   EditProperty,
 
 };

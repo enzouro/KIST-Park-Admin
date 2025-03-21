@@ -2,18 +2,19 @@
 import mongoose from 'mongoose';
 
 const HighlightSchema = new mongoose.Schema({
+  seq: {
+    type: Number,
+    required: true,
+  },
   title: {
     type: String,
     required: true,
     trim: true
   },
-  sdg: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'SDG',
-      required: true
-    }
-  ],
+  sdg: {
+    type: [String], // Array of strings instead of ObjectIds
+    required: false,
+  },
   date: {
     type: Date,
     required: false, // Optional as mentioned

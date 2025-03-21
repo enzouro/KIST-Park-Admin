@@ -1,76 +1,24 @@
-import { useState, useMemo } from 'react';
-
-
-import {
-  Box,
-  Paper,
-  Typography,
-  Stack,
-  TextField,
-  Button,
-  ButtonGroup,
-  Chip,
-  ChipProps,
-} from "@mui/material";
-
+import { useMemo, useState } from 'react';
+import { useTable } from '@pankod/refine-core';
+import { GridColDef, Box, Paper, Typography, Stack, TextField, ButtonGroup, Button } from '@pankod/refine-mui';
 import { Add } from '@mui/icons-material';
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from '@pankod/refine-react-router-v6';
 import CustomButton from 'components/common/CustomButton';
-import CustomTable from 'components/common/CustomTable';
 import useDynamicHeight from 'hooks/useDynamicHeight';
+import CustomTable from 'components/common/CustomTable';
 import DeleteConfirmationDialog from 'components/common/DeleteConfirmationDialog';
 import useDeleteWithConfirmation from 'hooks/useDeleteWithConfirmation';
-import useRestoreWithConfirmation from 'hooks/useRestoreWithConfirmation';
-
-
 import ErrorDialog from 'components/common/ErrorDialog';
 import LoadingDialog from 'components/common/LoadingDialog';
-import { useTable } from '@pankod/refine-core';
-import { GridColDef } from '@pankod/refine-mui';
-import { format } from 'date-fns';
 
-// Define type for Highlight
-interface SDG {
-  _id: string;
-  name?: string;
-  code?: string;
-}
-
-interface Highlight {
-  _id: string;
-  title: string;
-  date?: string;
-  location?: string;
-  sdg: SDG[];
-  status: 'draft' | 'published' | 'rejected';
-  createdAt: string;
-  content: string;
-  image?: string;
-}
-
-interface TableRow {
-  id: string;
-  title: string;
-  date?: string;
-  location: string;
-  sdg: SDG[];
-  status: 'draft' | 'published' | 'rejected';
-  createdAt: string;
-  content: string;
-  image?: string;
-}
-
-const AllHighlights: React.FC = () => {
+const AllHighlights = () => {
   const navigate = useNavigate();
   const containerHeight = useDynamicHeight();
-  
-  // Search and filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('');
-  
-  // Use both delete and restore hooks
+  const [statusFilter, setStatusFilter] = useState('all');
+
   const {
     deleteConfirmation,
     error: deleteError,
@@ -84,111 +32,63 @@ const AllHighlights: React.FC = () => {
     redirectPath: '/highlights',
   });
 
-  const {
-    error: restoreError,
-    handleTableRestore,
-    isLoading: isRestoreLoading,
-    closeErrorDialog: closeRestoreErrorDialog,
-  } = useRestoreWithConfirmation({
-    resource: 'highlights',
-    redirectPath: '/highlights',
-  });
 
-  // Use refine's useTable hook with proper filters
   const { 
     tableQueryResult: { data, isLoading, isError }
-    
-  } = useTable();
+  } = useTable({
+    resource: 'highlights',
+    hasPagination: false,
+  });
 
-  const allHighlights = (data?.data as Highlight[]) ?? [];
+  const allHighlights = data?.data ?? [];
 
-  // Filter highlights based on search term and date range
   const filteredRows = useMemo(() => {
     return allHighlights.filter((highlight) => {
-      // Check title for search term
-      const titleMatch = highlight.title.toLowerCase().includes(searchTerm.toLowerCase());
+      const highlightDate = highlight.date ? new Date(highlight.date) : null;
+      const matchesSearch = 
+        !searchTerm || 
+        highlight.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        highlight.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        highlight.seq?.toString().includes(searchTerm);
+        
+      const matchesDateRange = 
+        (!startDate || !highlightDate || highlightDate >= new Date(startDate)) &&
+        (!endDate || !highlightDate || highlightDate <= new Date(endDate));
 
-      // Check date range
-      let dateMatch = true;
-      if (highlight.date) {
-        const highlightDate = new Date(highlight.date);
-        if (startDate && new Date(startDate) > highlightDate) {
-          dateMatch = false;
-        }
-        if (endDate && new Date(endDate) < highlightDate) {
-          dateMatch = false;
-        }
-      }
+      const matchesStatusFilter = 
+        statusFilter === 'all' || 
+        highlight.status === statusFilter;
 
-      // Check status filter
-      const statusMatch = !statusFilter || highlight.status === statusFilter;
-
-      return titleMatch && dateMatch && statusMatch;
+      return matchesSearch && matchesDateRange && matchesStatusFilter;
     });
   }, [allHighlights, searchTerm, startDate, endDate, statusFilter]);
 
   const columns: GridColDef[] = [
-    { field: 'id', headerName: 'ID', flex: 0.5, sortable: true, hide: true },
-    { field: 'title', headerName: 'Title', flex: 2, sortable: true },
-    { 
-      field: 'date', 
-      headerName: 'Date', 
-      flex: 1, 
-      sortable: true,
-      renderCell: (params) => params.value ? format(new Date(params.value as string), 'MMM dd, yyyy') : 'N/A'
-    },
-    { field: 'location', headerName: 'Location', flex: 1, sortable: true },
-    { 
-      field: 'sdg', 
-      headerName: 'SDGs', 
-      flex: 1.5, 
-      sortable: false,
-      renderCell: (params) => (
-        <Stack direction="row" spacing={0.5} flexWrap="wrap">
-          {(params.value as SDG[]).map((sdg) => (
-            <Chip
-              key={sdg._id}
-              label={sdg.name || sdg.code}
-              size="small"
-              color="primary"
-              variant="outlined"
-              sx={{ margin: '2px' }}
-            />
-          ))}
-        </Stack>
-      )
-    },
+    { field: 'seq', headerName: 'Seq', flex: 0.5, sortable: true },
+    { field: 'title', headerName: 'Title', flex: 2 },
+    { field: 'sdg', headerName: 'SDG', flex: 1 },
+    { field: 'date', headerName: 'Date', flex: 1 },
+    { field: 'location', headerName: 'Location', flex: 1 },
     { 
       field: 'status', 
       headerName: 'Status', 
-      flex: 1, 
-      sortable: true,
-      renderCell: (params) => {
-        const value = params.value as string;
-        let chipColor: ChipProps['color'] = 'default';
-        
-        switch(value) {
-          case 'published':
-            chipColor = 'success';
-            break;
-          case 'draft':
-            chipColor = 'warning';
-            break;
-          case 'rejected':
-            chipColor = 'error';
-            break;
-        }
-        
-        return <Chip label={value} color={chipColor} size="small" />;
-      }
+      flex: 1,
+      renderCell: (params) => (
+        <Typography
+          variant="body2"
+          sx={{
+            color: 
+              params.row.status === 'published' ? 'success.main' : 
+              params.row.status === 'rejected' ? 'error.main' : 
+              'warning.main',
+            fontWeight: 'bold'
+          }}
+        >
+          {params.row.status}
+        </Typography>
+      )
     },
-    { 
-      field: 'createdAt', 
-      headerName: 'Created', 
-      flex: 1, 
-      sortable: true,
-      renderCell: (params) => format(new Date(params.value as string), 'MMM dd, yyyy')
-    }
+    { field: 'createdAt', headerName: 'Created At', flex: 1 },
   ];
 
   const handleView = (id: string) => {
@@ -198,22 +98,18 @@ const AllHighlights: React.FC = () => {
   const handleEdit = (id: string) => {
     navigate(`/highlights/edit/${id}`);
   };
-  
-  const rows: TableRow[] = filteredRows.map((highlight) => ({
-    id: highlight._id,
-    title: highlight.title,
-    date: highlight.date,
-    location: highlight.location || 'N/A',
-    sdg: highlight.sdg || [],
-    status: highlight.status,
-    createdAt: highlight.createdAt,
-    content: highlight.content,
-    image: highlight.image
-  }));
 
-  const handleStatusFilterChange = (status: string) => {
-    setStatusFilter(status === statusFilter ? '' : status);
-  };
+  const rows = filteredRows.map((highlight) => ({
+    id: highlight._id,
+    _id: highlight._id,
+    seq: highlight.seq,
+    title: highlight.title,
+    sdg: Array.isArray(highlight.sdg) ? highlight.sdg.join(', ') : highlight.sdg,
+    date: highlight.date ? new Date(highlight.date).toLocaleDateString() : '',
+    location: highlight.location || '',
+    status: highlight.status || 'draft',
+    createdAt: highlight.createdAt ? new Date(highlight.createdAt).toLocaleDateString() : '',
+  }));
 
   if (isLoading) {
     return (
@@ -237,7 +133,12 @@ const AllHighlights: React.FC = () => {
     <Paper 
       elevation={3} 
       sx={{ 
-        height: containerHeight,
+        height: {
+          xs: '700px',
+          sm: '700px',
+          md: containerHeight,
+          lg: containerHeight,
+        },
         display: 'flex',
         flexDirection: 'column',
         m: 2,
@@ -251,7 +152,7 @@ const AllHighlights: React.FC = () => {
           fontWeight: 600,
         }}
       >
-        {!allHighlights.length ? 'No Highlights Records' : 'Highlights'}
+        {!allHighlights.length ? 'No Highlights Records' : 'All Highlights'}
       </Typography>
       
       <Box sx={{ 
@@ -265,48 +166,82 @@ const AllHighlights: React.FC = () => {
         <Stack 
           direction={{ xs: 'column', sm: 'row' }} 
           spacing={2} 
-          sx={{ flex: 1, alignItems: 'center' }}
+          sx={{ flex: 1 }}
         >
           <TextField
             size="small"
             label="Search"
-            placeholder="Search by title"
+            placeholder="Search by title, location, or sequence"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            sx={{ minWidth: '250px' }}
+            sx={{ minWidth: {xs: '100%', sm: '300px'} }}
           />
-          <TextField
-            size="small"
-            label="From Date"
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-          />
-          <TextField
-            size="small"
-            label="To Date"
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-          />
-          <ButtonGroup size="small" variant="outlined">
-            <Button 
-              color={statusFilter === 'draft' ? 'warning' : 'inherit'}
-              onClick={() => handleStatusFilterChange('draft')}
+          <Box display='flex' flexDirection={{xs: 'column', sm: 'row'}} gap={2}>
+            <TextField
+              size="small"
+              label="Start Date"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              sx={{ width: {xs: '100%', sm: 'auto'} }}
+            />
+            <TextField
+              size="small"
+              label="End Date"
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              sx={{ width: {xs: '100%', sm: 'auto'} }}
+            />
+          </Box>
+          <ButtonGroup>
+            <Button
+              variant={statusFilter === 'all' ? 'contained' : 'outlined'}
+              onClick={() => setStatusFilter('all')}
+              size="small"
+              sx={{
+                height: '40px',
+                backgroundColor: statusFilter === 'all' ? 'primary.light' : 'inherit',
+                color: statusFilter === 'all' ? 'primary.contrastText' : 'inherit',
+              }}
+            >
+              All
+            </Button>
+            <Button
+              variant={statusFilter === 'draft' ? 'contained' : 'outlined'}
+              onClick={() => setStatusFilter('draft')}
+              size="small"
+              sx={{
+                height: '40px',
+                backgroundColor: statusFilter === 'draft' ? 'warning.light' : 'inherit',
+                color: statusFilter === 'draft' ? 'warning.contrastText' : 'inherit',
+              }}
             >
               Draft
             </Button>
-            <Button 
-              color={statusFilter === 'published' ? 'success' : 'inherit'} 
-              onClick={() => handleStatusFilterChange('published')}
+            <Button
+              variant={statusFilter === 'published' ? 'contained' : 'outlined'}
+              onClick={() => setStatusFilter('published')}
+              size="small"
+              sx={{
+                height: '40px',
+                backgroundColor: statusFilter === 'published' ? 'success.light' : 'inherit',
+                color: statusFilter === 'published' ? 'success.contrastText' : 'inherit',
+              }}
             >
               Published
             </Button>
-            <Button 
-              color={statusFilter === 'rejected' ? 'error' : 'inherit'}
-              onClick={() => handleStatusFilterChange('rejected')}
+            <Button
+              variant={statusFilter === 'rejected' ? 'contained' : 'outlined'}
+              onClick={() => setStatusFilter('rejected')}
+              size="small"
+              sx={{
+                height: '40px',
+                backgroundColor: statusFilter === 'rejected' ? 'error.light' : 'inherit',
+                color: statusFilter === 'rejected' ? 'error.contrastText' : 'inherit',
+              }}
             >
               Rejected
             </Button>
@@ -314,11 +249,11 @@ const AllHighlights: React.FC = () => {
         </Stack>
 
         <CustomButton
-          title="Add Highlight"
+          title="Add"
           backgroundColor="primary.light"
           color="primary.dark"
           icon={<Add />}
-          handleClick={() => navigate('/highlights/create')}
+          handleClick={() => navigate(`/highlights/create`)}
         />
       </Box>
 
@@ -334,39 +269,30 @@ const AllHighlights: React.FC = () => {
           onView={handleView}
           onEdit={handleEdit}
           onDelete={(ids) => handleTableDelete(ids, rows)}
-          initialSortModel={[{ field: 'createdAt', sort: 'desc' }]}
+          initialSortModel={[{ field: 'seq', sort: 'desc' }]}
         />
+
       </Box>
 
       {/* Delete Confirmation Dialog */}
       <DeleteConfirmationDialog
         open={deleteConfirmation.open}
-        isDeleted={deleteConfirmation.isDeleted}
-        contentText={`Are you sure you want to delete this highlight?`}
+        contentText={deleteConfirmation.seq}
         onConfirm={confirmDelete}
         onCancel={cancelDelete}
       />
-
-      {/* Loading Dialogs */}
+      
+      {/* Loading Dialog */}
       <LoadingDialog 
         open={isDeleteLoading} 
-        loadingMessage="Deleting highlight..." 
-      />
-      <LoadingDialog 
-        open={isRestoreLoading} 
-        loadingMessage="Restoring highlight..." 
+        loadingMessage="Please wait..." 
       />
 
-      {/* Error Dialogs */}
+      {/* Error Dialog */}
       <ErrorDialog
         open={deleteError.open}
         errorMessage={deleteError.message}
         onClose={closeDeleteErrorDialog}
-      />
-      <ErrorDialog
-        open={restoreError.open}
-        errorMessage={restoreError.message}
-        onClose={closeRestoreErrorDialog}
       />
     </Paper>
   );

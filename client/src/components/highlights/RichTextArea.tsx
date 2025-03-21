@@ -110,26 +110,25 @@ const TiptapEditor = ({
         {/* Text Formatting Toggle Buttons */}
         <ToggleButtonGroup 
           size="small" 
-          exclusive
         >
           <ToggleButton 
             value="bold"
             selected={editor.isActive('bold')}
-            onChange={() => handleFormatToggle('bold')}
+            onClick={() => handleFormatToggle('bold')}
           >
             <FormatBold />
           </ToggleButton>
           <ToggleButton 
             value="italic"
             selected={editor.isActive('italic')}
-            onChange={() => handleFormatToggle('italic')}
+            onClick={() => handleFormatToggle('italic')}
           >
             <FormatItalic />
           </ToggleButton>
           <ToggleButton 
             value="strike"
             selected={editor.isActive('strike')}
-            onChange={() => handleFormatToggle('strike')}
+            onClick={() => handleFormatToggle('strike')}
           >
             <FormatStrikethrough />
           </ToggleButton>
@@ -144,33 +143,36 @@ const TiptapEditor = ({
           <InputLabel>Heading</InputLabel>
           <Select
             label="Heading"
-            value=""
+            value={
+              editor.isActive('heading', { level: 1 }) ? '1' :
+              editor.isActive('heading', { level: 2 }) ? '2' :
+              editor.isActive('heading', { level: 3 }) ? '3' : '0'
+            }
             onChange={handleHeadingChange}
           >
-            <MenuItem value={0}>Paragraph</MenuItem>
-            <MenuItem value={1}>Heading 1</MenuItem>
-            <MenuItem value={2}>Heading 2</MenuItem>
-            <MenuItem value={3}>Heading 3</MenuItem>
+            <MenuItem value="0">Paragraph</MenuItem>
+            <MenuItem value="1">Heading 1</MenuItem>
+            <MenuItem value="2">Heading 2</MenuItem>
+            <MenuItem value="3">Heading 3</MenuItem>
           </Select>
         </FormControl>
 
         {/* List Buttons */}
         <ToggleButtonGroup 
           size="small" 
-          exclusive
           sx={{ ml: 2 }}
         >
           <ToggleButton 
             value="bulletList"
             selected={editor.isActive('bulletList')}
-            onChange={() => handleFormatToggle('bulletList')}
+            onClick={() => handleFormatToggle('bulletList')}
           >
             <FormatListBulleted />
           </ToggleButton>
           <ToggleButton 
             value="orderedList"
             selected={editor.isActive('orderedList')}
-            onChange={() => handleFormatToggle('orderedList')}
+            onClick={() => handleFormatToggle('orderedList')}
           >
             <FormatListNumbered />
           </ToggleButton>
@@ -180,29 +182,50 @@ const TiptapEditor = ({
         <ToggleButton 
           value="code"
           selected={editor.isActive('code')}
-          onChange={() => handleFormatToggle('code')}
+          onClick={() => handleFormatToggle('code')}
           sx={{ ml: 2 }}
         >
           <Code />
         </ToggleButton>
       </Box>
 
-      {/* Editor Content */}
+      {/* Editor Content - Improved to make entire area clickable */}
       <Box 
         sx={{ 
-          p: 2, 
+          position: 'relative',
           minHeight: 200,
+          cursor: 'text',
           '& .ProseMirror': {
             outline: 'none',
+            padding: 2,
+            minHeight: '200px',
+            height: '100%',
+            width: '100%',
             '&:focus': {
-              outline: 'none'
+              outline: 'none',
+              backgroundColor: 'rgba(0, 0, 0, 0.05)' // Subtle background change on focus
+            },
+            '&:hover': {
+              backgroundColor: 'rgba(0, 0, 0, 0.03)' // Very subtle hover effect
+            },
+            // Basic typography styles
+            '& h1': { fontSize: '1.7rem', marginBottom: '0.5em' },
+            '& h2': { fontSize: '1.5rem', marginBottom: '0.4em' },
+            '& h3': { fontSize: '1.3rem', marginBottom: '0.3em' },
+            '& p': { marginBottom: '0.8em' },
+            '& ul, & ol': { paddingLeft: '1.5em', marginBottom: '1em' },
+            '& li': { marginBottom: '0.2em' },
+            '& code': { 
+              backgroundColor: 'rgba(0, 0, 0, 0.15)',
+              padding: '0.1em 0.3em',
+              borderRadius: '3px',
+              fontFamily: 'monospace'
             }
           }
         }}
+        onClick={() => editor.chain().focus().run()}
       >
-        <EditorContent editor={editor} 
-
-        />
+        <EditorContent editor={editor} />
       </Box>
     </Box>
   );

@@ -9,11 +9,10 @@ import {
   Button,
   Typography,
 } from "@mui/material";
-import { Delete, DeleteForever } from '@mui/icons-material';
+import { DeleteForever } from '@mui/icons-material';
 
 interface DeleteConfirmationDialogProps {
   open: boolean;
-  isDeleted: boolean;
   contentText: string;
   onConfirm: () => void;
   onCancel: () => void;
@@ -21,12 +20,11 @@ interface DeleteConfirmationDialogProps {
 
 const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
   open,
-  isDeleted,
   contentText,
   onConfirm,
   onCancel,
 }) => {
-  const dialogConfig = isDeleted ? {
+  const dialogConfig =  {
     title: 'Confirm Permanent Deletion',
     description: `Are you sure you want to permanently delete ${contentText}? This action cannot be undone.`,
     confirmButton: {
@@ -34,15 +32,7 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
       icon: <DeleteForever />,
       color: 'error' as const
     }
-  } : {
-    title: 'Move to Trash',
-    description: `Are you sure you want to move ${contentText} to trash? You can restore it later.`,
-    confirmButton: {
-      text: 'Move to Trash',
-      icon: <Delete />,
-      color: 'warning' as const
-    }
-  };
+  }
 
   return (
     <Dialog
