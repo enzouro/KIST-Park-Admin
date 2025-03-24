@@ -4,6 +4,11 @@ import Home from './home';
 import { Login } from './login';
 import PropertyDetails from './property-details';
 import EditProperty from './edit-property';
+import AllHighlights from './all-highlights';
+import CreateHighlights from './create-highlights';
+import EditHighlights from './edit-highlights';
+import HighlightsPreview from './highlights-preview';
+
 
 
 export {
@@ -13,5 +18,10 @@ export {
   Login,
   PropertyDetails,
   EditProperty,
+
+  AllHighlights,
+  CreateHighlights,
+  EditHighlights,
+  HighlightsPreview,
 
 };

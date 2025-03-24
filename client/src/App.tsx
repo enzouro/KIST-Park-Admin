@@ -34,14 +34,16 @@ import {
   Home,
   Login,
   PropertyDetails,
+  AllHighlights,
+  CreateHighlights,
+  EditHighlights,
+  HighlightsPreview,
 } from 'pages';
 import React from 'react';
 import UserManagement from 'pages/user-management';
 import { UnauthorizedPage } from 'pages/unauthorized';
 
-import AllHighlights from 'pages/all-highlights';
-import CreateHighlights from 'pages/create-highlights';
-import EditHighlights from 'pages/edit-highlights';
+
 
 const axiosInstance = axios.create();
 axiosInstance.interceptors.request.use((request: AxiosRequestConfig) => {
@@ -200,6 +202,7 @@ const App = () => {
             {
               name: 'highlights',
               list: AllHighlights,
+              show: HighlightsPreview,
               create: CreateHighlights,
               edit: EditHighlights,
               icon: <Star />,
