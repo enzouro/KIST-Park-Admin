@@ -68,16 +68,21 @@ const HighlightsForm: React.FC<HighlightsFormProps> = ({
       console.error('No sequence number available');
       return;
     }
-
+  
     const formattedSdg = Array.isArray(data.sdg) ? data.sdg.join(', ') : data.sdg;
+    
+    // Ensure images is an array of strings
+    const images = Array.isArray(data.images) ? data.images : [];
     
     const updatedData = { 
       ...data,
       seq: currentSeq,
       sdg: formattedSdg,
       email: user.email,
+      images: images // Make sure this is included
     };
     
+    console.log('Submitting data:', updatedData); // Add this for debugging
     await onFinishHandler(updatedData);
     navigate('/highlights');
   };
@@ -255,15 +260,15 @@ const HighlightsForm: React.FC<HighlightsFormProps> = ({
           '& .MuiFormControl-root': { flex: 1 }
         }}>
           <Controller
-            name="images"
-            control={control}
-            defaultValue={initialValues?.images || []}
-            render={({ field }) => (
-              <ImageUploader
-                value={field.value}
-                onChange={field.onChange}
-              />
-            )}
+              name="images"
+              control={control}
+              defaultValue={initialValues?.images || []}
+              render={({ field }) => (
+                  <ImageUploader
+                      value={field.value}
+                      onChange={(newImages) => field.onChange(newImages)}
+                  />
+              )}
           />
         </Box>
 

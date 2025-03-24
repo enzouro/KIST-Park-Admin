@@ -16,48 +16,57 @@ cloudinary.config({
 
 
 
-
-// Add this utility function at the top of the file after imports
-const processSdgData = (sdg) => {
-  if (!sdg) return [];
-  
-  if (typeof sdg === 'string') {
-    if (sdg.startsWith('[') && sdg.endsWith(']')) {
-      try {
-        return JSON.parse(sdg.replace(/'/g, '"'));
-      } catch (e) {
-        return sdg.split(',').map(s => s.trim());
-      }
-    }
-    return [sdg];
-  }
-  
-  if (Array.isArray(sdg)) {
-    return sdg;
-  }
-  
-  return [sdg];
-};
+// ---------  Utility Functions -------------------//
 
 
-// Add this utility function
+// Image processing and uploading to Cloudinary
 const processImages = async (images) => {
   if (!images || !images.length) return [];
   
+  // Set upload options for better performance
+  const uploadOptions = {
+    resource_type: "auto",
+    quality: "auto", // Automatic quality optimization
+    fetch_format: "auto", // Automatic format optimization
+    timeout: 60000 // Increase timeout for large files
+  };
+
   const uploadPromises = images.map(async (image) => {
     if (image && typeof image === 'string') {
       if (image.startsWith('data:')) {
-        const uploadResult = await cloudinary.uploader.upload(image);
-        return uploadResult.url;
+        try {
+          const uploadResult = await cloudinary.uploader.upload(image, uploadOptions);
+          return uploadResult.url;
+        } catch (error) {
+          console.error('Upload error:', error);
+          return null;
+        }
       }
-      return image; // Keep existing URL
+      return image;
     }
     return null;
   });
   
+  // Use Promise.all for parallel uploads
   const results = await Promise.all(uploadPromises);
   return results.filter(Boolean);
 };
+
+// Delete image from Cloudinary
+const deleteImageFromCloudinary = async (imageUrl) => {
+  try {
+    // Extract public_id from Cloudinary URL
+    const publicId = imageUrl.split('/').slice(-1)[0].split('.')[0];
+    await cloudinary.uploader.destroy(publicId);
+    return true;
+  } catch (error) {
+    console.error('Error deleting image from Cloudinary:', error);
+    return false;
+  }
+};
+
+// --------- End of Utility Functions -------------------//
+
 
 // Get all highlights with filtering and pagination
 const getHighlights = async (req, res) => {
@@ -96,7 +105,7 @@ const getHighlights = async (req, res) => {
   }
 };
 
-// Get highlight by ID
+// Get highlight by ID for editing
 const getHighlightById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -126,71 +135,103 @@ const getHighlightById = async (req, res) => {
   }
 };
 
+
 // Create a new highlight
 const createHighlight = async (req, res) => {
   try {
     const {
-      title, sdg, date, location, content, images, status, seq, email // Add seq to destructuring
+      title, sdg, date, location, content, images, status, seq, email
     } = req.body;
 
-    // Create a new highlight with seq
-    const newHighlight = await Highlight.create({
+    // Start image processing early
+    const imageProcessingPromise = processImages(images);
+
+    // Create highlight document without waiting for images
+    const highlightData = {
       title,
       sdg,
       date,
       location,
       content,
-      images,
       status: status || 'draft',
-      seq, // Include seq in creation
+      seq,
       email
-    });
+    };
+
+    // Wait for both operations to complete
+    const [processedImages, highlight] = await Promise.all([
+      imageProcessingPromise,
+      Highlight.create(highlightData)
+    ]);
+
+    // Update highlight with processed images
+    highlight.images = processedImages;
+    await highlight.save();
 
     res.status(201).json({ 
       message: 'Highlight created successfully',
-      highlight: newHighlight
+      highlight
     });
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ message: 'Failed to create highlight, please try again later' });
+    console.error('Create error:', err);
+    res.status(500).json({ message: 'Failed to create highlight' });
   }
 };
+
 
 // Update a highlight
 const updateHighlight = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, sdg, date, location, content, images, status, seq, email } = req.body; // Add seq to destructuring
+    const { title, sdg, date, location, content, images, status, seq, email } = req.body;
+
+    // Get the existing highlight to compare images
+    const existingHighlight = await Highlight.findById(id);
+    if (!existingHighlight) {
+      return res.status(404).json({ message: 'Highlight not found' });
+    }
+
+    // Find images that were removed
+    const removedImages = existingHighlight.images.filter(
+      oldImage => !images.includes(oldImage)
+    );
+
+    // Delete removed images from Cloudinary
+    if (removedImages.length > 0) {
+      const deletePromises = removedImages.map(imageUrl => 
+        deleteImageFromCloudinary(imageUrl)
+      );
+      await Promise.all(deletePromises);
+    }
+
+    // Process and upload new images
+    const processedImages = await processImages(images);
 
     const updatedHighlight = await Highlight.findByIdAndUpdate(
-      { _id: id },
+      id,
       {
         title,
         sdg,
         date,
         location,
         content,
-        images,
+        images: processedImages,
         status,
-        seq, // Include seq in update
+        seq,
         email
       },
       { new: true }
     );
 
-    if (!updatedHighlight) {
-      return res.status(404).json({ message: 'Highlight not found' });
-    }
-
-    res.status(200).json({ 
+    res.status(200).json({
       message: 'Highlight updated successfully',
       highlight: updatedHighlight
     });
   } catch (err) {
+    console.error('Update error:', err);
     res.status(500).json({ message: 'Failed to update highlight' });
   }
 };
-
 
 
 // Delete a highlight
@@ -198,29 +239,31 @@ const deleteHighlight = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const highlightToDelete = await Highlight.findById({ _id: id });
+    const highlightToDelete = await Highlight.findById(id);
     if (!highlightToDelete) {
       return res.status(404).json({ message: 'Highlight not found' });
     }
 
-    // Delete multiple images from Cloudinary if they exist
+    // Delete images from Cloudinary if they exist
     if (highlightToDelete.images && highlightToDelete.images.length > 0) {
-      const deletePromises = highlightToDelete.images.map(async (imageUrl) => {
-        if (imageUrl) {
-          // Extract public_id from the Cloudinary URL
-          const publicId = imageUrl.split('/').pop().split('.')[0];
-          await cloudinary.uploader.destroy(publicId);
-        }
-      });
+      const deletePromises = highlightToDelete.images.map(imageUrl => 
+        deleteImageFromCloudinary(imageUrl)
+      );
       
       await Promise.all(deletePromises);
     }
 
-    await Highlight.findByIdAndDelete({ _id: id });
+    // Delete the highlight from MongoDB
+    await Highlight.findByIdAndDelete(id);
 
-    res.status(200).json({ message: 'Highlight deleted successfully' });
+    res.status(200).json({ 
+      message: 'Highlight and associated images deleted successfully' 
+    });
   } catch (err) {
-    res.status(500).json({ message: 'Failed to delete highlight, please try again later' });
+    console.error('Delete error:', err);
+    res.status(500).json({ 
+      message: 'Failed to delete highlight and images' 
+    });
   }
 };
 

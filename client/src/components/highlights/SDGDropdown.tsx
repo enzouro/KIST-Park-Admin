@@ -52,14 +52,20 @@ const SDGSelect: React.FC<SDGSelectProps> = ({ value = [], onChange, error }) =>
   const selectRef = useRef<HTMLDivElement>(null);
 
   // Process incoming values to ensure consistent format
-  const processValue = (val: (string | SDGOption)[]): string[] => {
-    return val.map(v => {
-      if (typeof v === 'object' && v !== null) {
-        return v._id || v.name;
-      }
-      return v;
-    });
-  };
+ // Process incoming values to ensure consistent format
+const processValue = (val: (string | SDGOption)[]): string[] => {
+  return val.flatMap(v => {
+    if (typeof v === 'object' && v !== null) {
+      // If the value is an object, extract the name or _id
+      return v.name || v._id;
+    }
+    // If the value is a string but contains multiple SDGs, split them all
+    if (typeof v === 'string' && v.includes(',')) {
+      return v.split(',').map(s => s.trim());
+    }
+    return v;
+  }).filter(Boolean); // Remove any empty values
+};
 
   const processedValue = processValue(value);
 
@@ -68,13 +74,14 @@ const SDGSelect: React.FC<SDGSelectProps> = ({ value = [], onChange, error }) =>
       target: { value: newValue },
     } = event;
     
-    const selectedValues = typeof newValue === 'string' 
-      ? newValue.split(',') 
-      : newValue;
+    // Ensure we're always working with an array
+    const selectedValues = Array.isArray(newValue) ? newValue : [newValue];
     
+    // Filter out any empty values and normalize the array
     const filteredValues = selectedValues.filter(Boolean);
     onChange(filteredValues);
   };
+  
 
   const handleDelete = (sdgToDelete: string) => {
     const newValues = processedValue.filter(sdg => sdg !== sdgToDelete);

@@ -23,8 +23,8 @@ const HighlightSchema = new mongoose.Schema({
     type: String,
     required: false,
   },
-  image: {
-    type: String, // Store the URL to the image on Cloudinary
+  images: {  // Changed from 'image' to 'images'
+    type: [String],  // Changed to array of strings
     required: false,
   },
   content: {

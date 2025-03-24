@@ -27,66 +27,63 @@ interface UploadedImage {
 }
 
 interface ImageUploaderProps {
-  // Allow both string arrays and UploadedImage arrays
-  value: (string | UploadedImage)[];
-  onChange: (images: (string | UploadedImage)[]) => void;
+  value: string[];  // Simplified to just handle string arrays
+  onChange: (images: string[]) => void;
 }
 
 
 const ImageUploader: React.FC<ImageUploaderProps> = ({ value = [], onChange }) => {
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
-  const processedImages = value.map(img => {
-    if (typeof img === 'string') {
-      return {
-        id: Date.now().toString(),
-        name: img.split('/').pop() || 'image',
-        size: 0,
-        url: img,
-        file: null
-      };
-    }
-    return img;
-  });
+   // Convert File to base64
+   const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
+  };
   
   // Handle file selection
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>): void => {
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>): Promise<void> => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
       setIsUploading(true);
       
-      // Create a preview URL
-      const imageUrl = URL.createObjectURL(file);
-      
-      // Simulate upload progress
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += 10;
-        setUploadProgress(progress);
+      try {
+        const base64String = await fileToBase64(file);
         
-        if (progress >= 100) {
-          clearInterval(interval);
-          setIsUploading(false);
-          setUploadProgress(0);
+        // Simulate upload progress
+        let progress = 0;
+        const interval = setInterval(() => {
+          progress += 10;
+          setUploadProgress(progress);
           
-          // Add new image to the array
-          const newImage: UploadedImage = {
-            id: Date.now().toString(),
-            name: file.name,
-            size: file.size,
-            url: imageUrl,
-            file
-          };
-          
-          onChange([...value, newImage]);
-        }
-      }, 200);
+          if (progress >= 100) {
+            clearInterval(interval);
+            setIsUploading(false);
+            setUploadProgress(0);
+            
+            // Make sure we're passing an array of strings
+            const newImages = [...value, base64String];
+            onChange(newImages);
+            
+            // Log for debugging
+            console.log('Updated images:', newImages);
+          }
+        }, 200);
+      } catch (error) {
+        console.error('Error converting file:', error);
+        setIsUploading(false);
+      }
     }
   };
   
   // Handle image removal
-  const handleRemoveImage = (id: string): void => {
-    onChange(value.filter(img => (typeof img !== 'string' && img.id !== id)));
+  const handleRemoveImage = (index: number): void => {
+    const newImages = value.filter((_, i) => i !== index);
+    onChange(newImages);
   };
   
   // Handle image reordering
@@ -129,7 +126,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ value = [], onChange }) =
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, my: 2 }}>
         {value.map((image, index) => (
           <Card 
-            key={typeof image === 'string' ? image : image.id} 
+            key={image} 
             sx={{ 
               display: 'flex',
               alignItems: 'center',
@@ -150,16 +147,13 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ value = [], onChange }) =
                 borderRadius: 1,
                 mr: 2
               }}
-              image={typeof image === 'string' ? image : image.url}
-              alt={typeof image === 'string' ? 'image' : image.name}
+              image={image}
+              alt={`Image ${index + 1}`}
             />
             
             <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
               <Typography variant="subtitle2" noWrap>
-                {typeof image === 'string' ? image.split('/').pop() : image.name}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {typeof image !== 'string' && formatFileSize(image.size)}
+                {image.split('/').pop()}
               </Typography>
               <Chip 
                 label={index === 0 ? "Featured Image" : `Image ${index + 1}`}
@@ -187,7 +181,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ value = [], onChange }) =
               <IconButton 
                 size="small" 
                 color="error" 
-                onClick={() => typeof image !== 'string' && handleRemoveImage(image.id)}
+                onClick={() => handleRemoveImage(index)}
               >
                 <Delete fontSize="small" />
               </IconButton>
