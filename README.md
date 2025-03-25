@@ -29,8 +29,8 @@ The project follows a client-server architecture with the following structure:
 - **Material UI:** Provides a responsive and modern UI design.
 
 ## Planned Hosting
-- **Client-Side:** Netlify
-- **Server-Side:** Render
+- **Client-Side:** Netlify [pricing](https://www.netlify.com/pricing/)
+- **Server-Side:** Render [pricing](https://render.com/pricing)
 
 ## Getting Started
 1. Clone the repository:
