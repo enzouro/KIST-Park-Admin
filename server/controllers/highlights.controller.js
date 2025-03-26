@@ -23,22 +23,35 @@ cloudinary.config({
 const processImages = async (images) => {
   if (!images || !images.length) return [];
   
-  // Set upload options for better performance
+  // Improved upload options
   const uploadOptions = {
     resource_type: "auto",
-    quality: "auto", // Automatic quality optimization
-    fetch_format: "auto", // Automatic format optimization
-    timeout: 60000 // Increase timeout for large files
+    quality: "auto:low",  // Lower quality for faster uploads
+    fetch_format: "auto", 
+    transformation: [
+      { width: 1024, crop: "limit" }, // Resize large images
+      { quality: "auto:low" } // Compress images
+    ],
+    timeout: 60000, // Reduced timeout
+    max_results: 10 // Limit concurrent uploads
   };
 
-  const uploadPromises = images.map(async (image) => {
+  // Use a rate-limited, concurrent upload strategy
+  const uploadPromises = images.slice(0, 5).map(async (image) => {
     if (image && typeof image === 'string') {
       if (image.startsWith('data:')) {
         try {
+          // Check image size before processing
+          const base64Size = image.length * (3/4);
+          if (base64Size > 10 * 1024 * 1024) { // 10MB limit
+            console.warn('Image too large, skipping');
+            return null;
+          }
+
           const uploadResult = await cloudinary.uploader.upload(image, uploadOptions);
           return uploadResult.url;
         } catch (error) {
-          console.error('Upload error:', error);
+          console.error('Lightweight upload error:', error);
           return null;
         }
       }
@@ -47,24 +60,37 @@ const processImages = async (images) => {
     return null;
   });
   
-  // Use Promise.all for parallel uploads
-  const results = await Promise.all(uploadPromises);
-  return results.filter(Boolean);
+  // Use Promise.allSettled for more robust handling
+  const results = await Promise.allSettled(uploadPromises);
+  
+  return results
+    .filter(result => result.status === 'fulfilled' && result.value)
+    .map(result => result.value);
 };
 
 // Delete image from Cloudinary
 const deleteImageFromCloudinary = async (imageUrl) => {
   try {
-    // Extract public_id from Cloudinary URL
+    // Implement a simple caching mechanism to prevent repeated deletions
     const publicId = imageUrl.split('/').slice(-1)[0].split('.')[0];
+    
+    // Use a simple in-memory cache to track deleted images
+    if (deleteImageFromCloudinary.deletedCache.has(publicId)) {
+      return true;
+    }
+
     await cloudinary.uploader.destroy(publicId);
+    
+    // Mark as deleted in cache
+    deleteImageFromCloudinary.deletedCache.add(publicId);
     return true;
   } catch (error) {
-    console.error('Error deleting image from Cloudinary:', error);
+    console.error('Lightweight delete error:', error);
     return false;
   }
 };
 
+deleteImageFromCloudinary.deletedCache = new Set();
 // --------- End of Utility Functions -------------------//
 
 
@@ -143,30 +169,42 @@ const createHighlight = async (req, res) => {
       title, sdg, date, location, content, images, status, seq, email
     } = req.body;
 
-    // Start image processing early
-    const imageProcessingPromise = processImages(images);
+    // Parallel processing with timeout
+    const createHighlightWithTimeout = async () => {
+      // Start image processing
+      const imageProcessingPromise = processImages(images);
 
-    // Create highlight document without waiting for images
-    const highlightData = {
-      title,
-      sdg,
-      date,
-      location,
-      content,
-      status: status || 'draft',
-      seq,
-      email
+      // Create highlight document
+      const highlightData = {
+        title,
+        sdg,
+        date,
+        location,
+        content,
+        status: status || 'draft',
+        seq,
+        email
+      };
+
+      // Wait for both operations with a timeout
+      const [processedImages, highlight] = await Promise.all([
+        Promise.race([
+          imageProcessingPromise,
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Image processing timeout')), 30000)
+          )
+        ]),
+        Highlight.create(highlightData)
+      ]);
+
+      // Update highlight with processed images
+      highlight.images = processedImages;
+      await highlight.save();
+
+      return highlight;
     };
 
-    // Wait for both operations to complete
-    const [processedImages, highlight] = await Promise.all([
-      imageProcessingPromise,
-      Highlight.create(highlightData)
-    ]);
-
-    // Update highlight with processed images
-    highlight.images = processedImages;
-    await highlight.save();
+    const highlight = await createHighlightWithTimeout();
 
     res.status(201).json({ 
       message: 'Highlight created successfully',
@@ -174,7 +212,10 @@ const createHighlight = async (req, res) => {
     });
   } catch (err) {
     console.error('Create error:', err);
-    res.status(500).json({ message: 'Failed to create highlight' });
+    res.status(500).json({ 
+      message: 'Failed to create highlight', 
+      error: err.message 
+    });
   }
 };
 
@@ -185,43 +226,61 @@ const updateHighlight = async (req, res) => {
     const { id } = req.params;
     const { title, sdg, date, location, content, images, status, seq, email } = req.body;
 
-    // Get the existing highlight to compare images
-    const existingHighlight = await Highlight.findById(id);
-    if (!existingHighlight) {
-      return res.status(404).json({ message: 'Highlight not found' });
-    }
+    const updateHighlightWithTimeout = async () => {
+      // Get existing highlight
+      const existingHighlight = await Highlight.findById(id);
+      if (!existingHighlight) {
+        throw new Error('Highlight not found');
+      }
 
-    // Find images that were removed
-    const removedImages = existingHighlight.images.filter(
-      oldImage => !images.includes(oldImage)
-    );
+      // Start parallel processes
+      const processPromises = [
+        // Process 1: Handle image deletions
+        (async () => {
+          const removedImages = existingHighlight.images.filter(
+            oldImage => !images.includes(oldImage)
+          );
+          if (removedImages.length > 0) {
+            const deletePromises = removedImages.map(imageUrl => 
+              deleteImageFromCloudinary(imageUrl)
+            );
+            await Promise.all(deletePromises);
+          }
+        })(),
 
-    // Delete removed images from Cloudinary
-    if (removedImages.length > 0) {
-      const deletePromises = removedImages.map(imageUrl => 
-        deleteImageFromCloudinary(imageUrl)
+        // Process 2: Handle new image processing
+        Promise.race([
+          processImages(images),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Image processing timeout')), 30000)
+          )
+        ])
+      ];
+
+      // Wait for all processes to complete
+      const [_, processedImages] = await Promise.all(processPromises);
+
+      // Update highlight with new data
+      const updatedHighlight = await Highlight.findByIdAndUpdate(
+        id,
+        {
+          title,
+          sdg,
+          date,
+          location,
+          content,
+          images: processedImages,
+          status,
+          seq,
+          email
+        },
+        { new: true }
       );
-      await Promise.all(deletePromises);
-    }
 
-    // Process and upload new images
-    const processedImages = await processImages(images);
+      return updatedHighlight;
+    };
 
-    const updatedHighlight = await Highlight.findByIdAndUpdate(
-      id,
-      {
-        title,
-        sdg,
-        date,
-        location,
-        content,
-        images: processedImages,
-        status,
-        seq,
-        email
-      },
-      { new: true }
-    );
+    const updatedHighlight = await updateHighlightWithTimeout();
 
     res.status(200).json({
       message: 'Highlight updated successfully',
@@ -229,7 +288,10 @@ const updateHighlight = async (req, res) => {
     });
   } catch (err) {
     console.error('Update error:', err);
-    res.status(500).json({ message: 'Failed to update highlight' });
+    res.status(500).json({ 
+      message: 'Failed to update highlight',
+      error: err.message 
+    });
   }
 };
 

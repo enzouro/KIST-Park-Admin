@@ -51,7 +51,6 @@ const SDGSelect: React.FC<SDGSelectProps> = ({ value = [], onChange, error }) =>
   const [open, setOpen] = useState(false);
   const selectRef = useRef<HTMLDivElement>(null);
 
-  // Process incoming values to ensure consistent format
  // Process incoming values to ensure consistent format
 const processValue = (val: (string | SDGOption)[]): string[] => {
   return val.flatMap(v => {
