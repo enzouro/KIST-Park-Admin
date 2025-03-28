@@ -1,10 +1,6 @@
 import {
-  AccountCircleOutlined,
-  ChatBubbleOutline,
   ManageAccounts,
-  PeopleAltOutlined,
   Star,
-  StarOutlineRounded,
   VillaOutlined,
 } from '@mui/icons-material';
 import { AuthProvider, Refine } from '@pankod/refine-core';
@@ -15,12 +11,10 @@ import {
   notificationProvider,
   ReadyPage,
   RefineSnackbarProvider,
-  Show,
 } from '@pankod/refine-mui';
 import routerProvider from '@pankod/refine-react-router-v6';
 import dataProvider from '@pankod/refine-simple-rest';
 import axios, { AxiosRequestConfig } from 'axios';
-import StarIcon from '@mui/icons-material/Star';
 
 import { Header, Layout, Sider, Title } from 'components/layout';
 import { ColorModeContextProvider } from 'contexts';

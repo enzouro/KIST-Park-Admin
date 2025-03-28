@@ -31,6 +31,7 @@ const CreateHighlights = () => {
       title: '',
       date: '',
       location: '',
+      category: '',
       sdg: [], 
       content: '',
       images: [],

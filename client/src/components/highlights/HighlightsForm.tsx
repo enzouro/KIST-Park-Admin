@@ -13,12 +13,17 @@ import { Controller } from 'react-hook-form';
 import { Close, Publish } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
+
 import { HighlightsFormProps } from 'interfaces/forms';
 import CustomButton from 'components/common/CustomButton';
 import RichTextArea from 'components/highlights/RichTextArea';
 import ImageUploader from './ImageUploader';
 import SDGSelect from './SDGDropdown';
+import CategoryDropdown from 'components/category/CategoryDropdown';
 import useNextSequence from 'hooks/useNextSequence';
+
+
+
 
 const status = [
   { value: 'rejected', label: 'Rejected' },
@@ -78,6 +83,7 @@ const HighlightsForm: React.FC<HighlightsFormProps> = ({
       ...data,
       seq: currentSeq,
       sdg: formattedSdg,
+      category: data.category,
       email: user.email,
       images: images // Make sure this is included
     };
@@ -194,30 +200,50 @@ const HighlightsForm: React.FC<HighlightsFormProps> = ({
             error={!!errors?.location}
             defaultValue={initialValues?.location || ''}
           />
+        </Box>
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: { xs: 'column', sm: 'row' }, 
+          gap: 2,
+          '& .MuiFormControl-root': { flex: 1 }
+        }}>
           <Controller
-            name="status"
+            name="category"
             control={control}
-            defaultValue={initialValues?.status || 'draft'}
+            defaultValue={initialValues?.category || ''}
             render={({ field }) => (
-              <TextField
-                select
-                label="Status"
+              <CategoryDropdown
                 value={field.value}
                 onChange={field.onChange}
-                helperText="Please select the status"
-                variant="filled"
-                SelectProps={{
-                  native: true,
-                }}
-              >
-                {status.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </TextField>
-            )}
-          />
+                error={!!errors?.category}
+              />
+            )} />
+
+
+            <Controller
+                name="status"
+                control={control}
+                defaultValue={initialValues?.status || 'draft'}
+                render={({ field }) => (
+                  <TextField
+                    select
+                    label="Status"
+                    value={field.value}
+                    onChange={field.onChange}
+                    helperText="Please select the status"
+                    variant="filled"
+                    SelectProps={{
+                      native: true,
+                    }}
+                  >
+                    {status.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </TextField>
+                )}
+              />
         </Box>
 
         {/* SDG Selection component */}

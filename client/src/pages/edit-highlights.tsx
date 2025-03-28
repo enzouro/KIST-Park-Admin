@@ -20,7 +20,7 @@ const { queryResult } = useShow({
   resource: 'highlights',
   id: id as string,
   metaData: {
-    populate: ['sdg'] // If you need to populate SDG data
+    populate: ['sdg', 'category'] 
   }
 });
 
@@ -44,6 +44,7 @@ useEffect(() => {
       title: data.title || '',
       date: data.date ? new Date(data.date).toISOString().split('T')[0] : '',
       location: data.location || '',
+      category: data.category?._id || '',
       sdg: processSdg(data.sdg),
       content: data.content || '',
       images: processImages(data.images),
@@ -120,6 +121,7 @@ useEffect(() => {
         title: data.title || '',
         date: data.date ? new Date(data.date).toISOString().split('T')[0] : '',
         location: data.location || '',
+        category: data.category?._id || '',
         sdg: processedSdg,
         content: data.content || '',
         images: processedImages,
@@ -181,6 +183,7 @@ useEffect(() => {
     type="Edit"
     initialValues={{
       ...highlightData.data,
+      category: highlightData.data.category?._id || '',
       images: Array.isArray(highlightData.data.images) 
         ? highlightData.data.images 
         : [highlightData.data.images].filter(Boolean),

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTable } from '@pankod/refine-core';
 import { GridColDef, Box, Paper, Typography, Stack, TextField, ButtonGroup, Button } from '@pankod/refine-mui';
-import { Add } from '@mui/icons-material';
+import { Add, Close, Settings } from '@mui/icons-material';
 import { useNavigate } from '@pankod/refine-react-router-v6';
 import CustomButton from 'components/common/CustomButton';
 import useDynamicHeight from 'hooks/useDynamicHeight';
@@ -10,6 +10,8 @@ import DeleteConfirmationDialog from 'components/common/DeleteConfirmationDialog
 import useDeleteWithConfirmation from 'hooks/useDeleteWithConfirmation';
 import ErrorDialog from 'components/common/ErrorDialog';
 import LoadingDialog from 'components/common/LoadingDialog';
+import { Dialog, DialogContent, DialogTitle, IconButton, MenuItem } from '@mui/material';
+import CategoryManage from 'components/category/CategoryManage';
 
 const AllHighlights = () => {
   const navigate = useNavigate();
@@ -18,6 +20,9 @@ const AllHighlights = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [categoryManageOpen, setCategoryManageOpen] = useState(false);
+
 
   const {
     deleteConfirmation,
@@ -40,6 +45,15 @@ const AllHighlights = () => {
     hasPagination: false,
   });
 
+  const {
+    tableQueryResult: { data: categoryData }
+  } = useTable({
+    resource: 'categories',
+    hasPagination: false,
+  });
+  
+  const categories = categoryData?.data ?? [];
+
   const allHighlights = data?.data ?? [];
 
   const filteredRows = useMemo(() => {
@@ -59,13 +73,18 @@ const AllHighlights = () => {
         statusFilter === 'all' || 
         highlight.status === statusFilter;
 
-      return matchesSearch && matchesDateRange && matchesStatusFilter;
+        const matchesCategoryFilter = 
+      categoryFilter === 'all' || 
+      highlight.category?._id === categoryFilter;
+
+      return matchesSearch && matchesDateRange && matchesStatusFilter && matchesCategoryFilter;
     });
-  }, [allHighlights, searchTerm, startDate, endDate, statusFilter]);
+  }, [allHighlights, searchTerm, startDate, endDate, statusFilter, categoryFilter]);
 
   const columns: GridColDef[] = [
     { field: 'seq', headerName: 'Seq', flex: 0.5, sortable: true },
     { field: 'title', headerName: 'Title', flex: 2 },
+    { field: 'category', headerName: 'Category', flex: 1 },
     { field: 'sdg', headerName: 'SDG', flex: 1 },
     { field: 'date', headerName: 'Date', flex: 1 },
     { field: 'location', headerName: 'Location', flex: 1 },
@@ -104,6 +123,7 @@ const AllHighlights = () => {
     _id: highlight._id,
     seq: highlight.seq,
     title: highlight.title,
+    category: highlight.category?.catergory || '',
     sdg: Array.isArray(highlight.sdg) ? highlight.sdg.join(', ') : highlight.sdg,
     date: highlight.date ? new Date(highlight.date).toLocaleDateString() : '',
     location: highlight.location || '',
@@ -156,107 +176,161 @@ const AllHighlights = () => {
       </Typography>
       
       <Box sx={{ 
-        p: 2,
         display: 'flex', 
-        flexDirection: {xs: 'column', md: 'row'},
+        flexDirection: 'column',
         gap: 2,
-        alignItems: {xs: 'stretch', md: 'center'},
-        justifyContent: 'space-between'
+        padding: 2,
       }}>
-        <Stack 
-          direction={{ xs: 'column', sm: 'row' }} 
-          spacing={2} 
-          sx={{ flex: 1 }}
+        {/* Search and Date Filter Grid */}
+        <Box 
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: '2fr 3fr auto' },
+          }}
         >
-          <TextField
-            size="small"
-            label="Search"
-            placeholder="Search by title, location, or sequence"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            sx={{ minWidth: {xs: '100%', sm: '300px'} }}
-          />
-          <Box display='flex' flexDirection={{xs: 'column', sm: 'row'}} gap={2}>
+          {/* Search Box */}
+          <Box 
+           padding={2}
+            sx={{ p: 2 }}
+          >
             <TextField
+              fullWidth
+              size="small"
+              label="Search"
+              placeholder="Search by title, location, or sequence"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </Box>
+
+          {/* Date Range */}
+          <Box 
+          
+            sx={{ 
+              p: 2,
+              display: ' flex',
+              gap: 2,
+            }}
+          >
+            <TextField
+              fullWidth
               size="small"
               label="Start Date"
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               InputLabelProps={{ shrink: true }}
-              sx={{ width: {xs: '100%', sm: 'auto'} }}
             />
             <TextField
+              fullWidth
               size="small"
               label="End Date"
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
               InputLabelProps={{ shrink: true }}
-              sx={{ width: {xs: '100%', sm: 'auto'} }}
             />
           </Box>
-          <ButtonGroup>
-            <Button
-              variant={statusFilter === 'all' ? 'contained' : 'outlined'}
-              onClick={() => setStatusFilter('all')}
-              size="small"
-              sx={{
-                height: '40px',
-                backgroundColor: statusFilter === 'all' ? 'primary.light' : 'inherit',
-                color: statusFilter === 'all' ? 'primary.contrastText' : 'inherit',
-              }}
-            >
-              All
-            </Button>
-            <Button
-              variant={statusFilter === 'draft' ? 'contained' : 'outlined'}
-              onClick={() => setStatusFilter('draft')}
-              size="small"
-              sx={{
-                height: '40px',
-                backgroundColor: statusFilter === 'draft' ? 'warning.light' : 'inherit',
-                color: statusFilter === 'draft' ? 'warning.contrastText' : 'inherit',
-              }}
-            >
-              Draft
-            </Button>
-            <Button
-              variant={statusFilter === 'published' ? 'contained' : 'outlined'}
-              onClick={() => setStatusFilter('published')}
-              size="small"
-              sx={{
-                height: '40px',
-                backgroundColor: statusFilter === 'published' ? 'success.light' : 'inherit',
-                color: statusFilter === 'published' ? 'success.contrastText' : 'inherit',
-              }}
-            >
-              Published
-            </Button>
-            <Button
-              variant={statusFilter === 'rejected' ? 'contained' : 'outlined'}
-              onClick={() => setStatusFilter('rejected')}
-              size="small"
-              sx={{
-                height: '40px',
-                backgroundColor: statusFilter === 'rejected' ? 'error.light' : 'inherit',
-                color: statusFilter === 'rejected' ? 'error.contrastText' : 'inherit',
-              }}
-            >
-              Rejected
-            </Button>
-          </ButtonGroup>
-        </Stack>
 
-        <CustomButton
-          title="Add"
-          backgroundColor="primary.light"
-          color="primary.dark"
-          icon={<Add />}
-          handleClick={() => navigate(`/highlights/create`)}
-        />
+          {/* Add Button */}
+          <CustomButton
+            title="Add"
+            backgroundColor="primary.light"
+            color="primary.dark"
+            icon={<Add />}
+            handleClick={() => navigate(`/highlights/create`)}
+          />
+        </Box>
+
+        {/* Status and Category Filter Grid */}
+        <Box 
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' },
+          }}
+        >
+          {/* Status Filter */}
+          <Box 
+            sx={{ p: 2 }}
+          >
+            <ButtonGroup fullWidth>
+              <Button
+                variant={statusFilter === 'all' ? 'contained' : 'outlined'}
+                onClick={() => setStatusFilter('all')}
+                sx={{
+                  backgroundColor: statusFilter === 'all' ? 'primary.light' : 'inherit',
+                  color: statusFilter === 'all' ? 'primary.contrastText' : 'inherit',
+                }}
+              >
+                All
+              </Button>
+              <Button
+                variant={statusFilter === 'draft' ? 'contained' : 'outlined'}
+                onClick={() => setStatusFilter('draft')}
+                sx={{
+                  backgroundColor: statusFilter === 'draft' ? 'warning.light' : 'inherit',
+                  color: statusFilter === 'draft' ? 'warning.contrastText' : 'inherit',
+                }}
+              >
+                Draft
+              </Button>
+              <Button
+                variant={statusFilter === 'published' ? 'contained' : 'outlined'}
+                onClick={() => setStatusFilter('published')}
+                sx={{
+                  backgroundColor: statusFilter === 'published' ? 'success.light' : 'inherit',
+                  color: statusFilter === 'published' ? 'success.contrastText' : 'inherit',
+                }}
+              >
+                Published
+              </Button>
+              <Button
+                variant={statusFilter === 'rejected' ? 'contained' : 'outlined'}
+                onClick={() => setStatusFilter('rejected')}
+                sx={{
+                  backgroundColor: statusFilter === 'rejected' ? 'error.light' : 'inherit',
+                  color: statusFilter === 'rejected' ? 'error.contrastText' : 'inherit',
+                }}
+              >
+                Rejected
+              </Button>
+            </ButtonGroup>
+          </Box>
+
+          {/* Category Filter */}
+          <Box 
+            sx={{ 
+              p: 2,
+              display: 'flex',
+            }}
+          >
+            <TextField
+              select
+              fullWidth
+              size="small"
+              label="Category Filter"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+            >
+              <MenuItem value="all">All Categories</MenuItem>
+              {categories.map((category) => (
+                <MenuItem key={category._id} value={category._id}>
+                  {category.catergory}
+                </MenuItem>
+              ))}
+            </TextField>
+            <IconButton
+              onClick={() => setCategoryManageOpen(true)}
+              sx={{ 
+                bgcolor: 'grey.100',
+                '&:hover': { bgcolor: 'grey.200' }
+              }}
+            >
+              <Settings />
+            </IconButton>
+          </Box>
+        </Box>
       </Box>
-
       <Box sx={{ 
         flex: 1,
         width: '100%',
@@ -294,6 +368,27 @@ const AllHighlights = () => {
         errorMessage={deleteError.message}
         onClose={closeDeleteErrorDialog}
       />
+
+
+        <Dialog
+          open={categoryManageOpen}
+          onClose={() => setCategoryManageOpen(false)}
+          maxWidth="xs"
+          fullWidth
+        >
+          <DialogTitle>
+            Manage Categories
+            <IconButton
+              aria-label="close"
+              onClick={() => setCategoryManageOpen(false)}
+            >
+              <Close />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent>
+            <CategoryManage />
+          </DialogContent>
+        </Dialog>
     </Paper>
   );
 };

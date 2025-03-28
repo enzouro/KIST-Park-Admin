@@ -5,6 +5,8 @@ import { v2 as cloudinary } from 'cloudinary';
 import mongoose from 'mongoose';
 
 import Highlight from '../mongodb/models/highlights.js';
+import Catergory from '../mongodb/models/catergory.js'; // Add this import
+
 
 dotenv.config();
 
@@ -115,7 +117,8 @@ const getHighlights = async (req, res) => {
 
     const highlights = await Highlight
       .find(query)
-      .select('_id seq title sdg date location status createdAt') // Include seq in selection
+      .select('_id seq title sdg date location status createdAt category images') // Include seq in selection
+      .populate('category', 'catergory') // Only get the category name
       .populate('sdg')
       .limit(_end ? parseInt(_end, 10) : undefined)
       .skip(_start ? parseInt(_start, 10) : 0)
@@ -142,7 +145,8 @@ const getHighlightById = async (req, res) => {
     
     const highlight = await Highlight
       .findById(id)
-      .select('_id seq title sdg date location content status createdAt images'); // Include seq in selection
+      .select('_id seq title sdg date location content status createdAt images')
+      .populate('category');
 
     if (highlight) {
       const formattedHighlight = {
@@ -166,13 +170,31 @@ const getHighlightById = async (req, res) => {
 const createHighlight = async (req, res) => {
   try {
     const {
-      title, sdg, date, location, content, images, status, seq, email
+      title, sdg, date, location, content, images, status, seq, email, category
     } = req.body;
+
+
 
     // Parallel processing with timeout
     const createHighlightWithTimeout = async () => {
       // Start image processing
       const imageProcessingPromise = processImages(images);
+
+      if (category) {
+        try {
+          if (!mongoose.Types.ObjectId.isValid(category)) {
+            throw new Error('Invalid category ID format');
+          }
+          
+          const categoryExists = await Catergory.findById(category);
+          if (!categoryExists) {
+            throw new Error('Category not found');
+          }
+        } catch (error) {
+          console.error('Category validation error:', error);
+          throw new Error(`Category validation failed: ${error.message}`);
+        }
+      }
 
       // Create highlight document
       const highlightData = {
@@ -183,7 +205,8 @@ const createHighlight = async (req, res) => {
         content,
         status: status || 'draft',
         seq,
-        email
+        email,
+        category
       };
 
       // Wait for both operations with a timeout
@@ -224,13 +247,29 @@ const createHighlight = async (req, res) => {
 const updateHighlight = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, sdg, date, location, content, images, status, seq, email } = req.body;
+    const { title, sdg, date, location, content, images, status, seq, email, category } = req.body;
 
     const updateHighlightWithTimeout = async () => {
       // Get existing highlight
       const existingHighlight = await Highlight.findById(id);
       if (!existingHighlight) {
         throw new Error('Highlight not found');
+      }
+
+      if (category) {
+        try {
+          if (!mongoose.Types.ObjectId.isValid(category)) {
+            throw new Error('Invalid category ID format');
+          }
+          
+          const categoryExists = await Catergory.findById(category);
+          if (!categoryExists) {
+            throw new Error('Category not found');
+          }
+        } catch (error) {
+          console.error('Category validation error:', error);
+          throw new Error(`Category validation failed: ${error.message}`);
+        }
       }
 
       // Start parallel processes
@@ -272,10 +311,11 @@ const updateHighlight = async (req, res) => {
           images: processedImages,
           status,
           seq,
-          email
+          email,
+          category
         },
         { new: true }
-      );
+      ).populate('category');
 
       return updatedHighlight;
     };
@@ -329,33 +369,28 @@ const deleteHighlight = async (req, res) => {
   }
 };
 
-// Update highlight status
-const updateHighlightStatus = async (req, res) => {
+const getDashboardHighlights = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { status } = req.body;
+    const { limit = 6 } = req.query;
 
-    if (!status || !['draft', 'published', 'rejected'].includes(status)) {
-      return res.status(400).json({ message: 'Invalid status value' });
-    }
-    
+    const highlights = await Highlight
+      .find({ status: 'published' })
+      .select('_id title location status date category images') // Include images field
+      .populate('category', 'catergory') // Populate category field
+      .sort({ date: -1 })
+      .limit(parseInt(limit))
+      .lean()
+      .then(docs => docs.map(doc => ({
+        ...doc,
+        featuredImage: doc.images?.[0]?.url || null, // Add the first image as featuredImage
+      })));
 
-    const updatedHighlight = await Highlight.findByIdAndUpdate(
-      { _id: id },
-      { status },
-      { new: true }
-    );
-
-    if (!updatedHighlight) {
-      return res.status(404).json({ message: 'Highlight not found' });
-    }
-
-    res.status(200).json({
-      message: 'Status updated successfully',
-      highlight: updatedHighlight
-    });
+    res.status(200).json(highlights);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to update status, please try again later' });
+    console.error('Dashboard fetch error:', err);
+    res.status(500).json({ 
+      message: 'Failed to fetch dashboard highlights' 
+    });
   }
 };
 
@@ -364,6 +399,6 @@ export {
   getHighlightById,
   createHighlight,
   updateHighlight,
-  updateHighlightStatus,
   deleteHighlight,
+  getDashboardHighlights,
 }

@@ -8,6 +8,7 @@ export interface HighlightsFormValues {
   title: string;
   date: string;
   location: string;
+  category: string; // Add category field
   sdg: string[] | string;
   content: string;
   images: any[]; // Array of image URLs or objects

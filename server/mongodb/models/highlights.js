@@ -15,6 +15,11 @@ const HighlightSchema = new mongoose.Schema({
     type: [String], // Array of strings instead of ObjectIds
     required: false,
   },
+  category: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Catergory', // Reference to the Category model
+    required: false,
+  },
   date: {
     type: Date,
     required: false, // Optional as mentioned
