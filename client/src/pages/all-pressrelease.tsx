@@ -1,294 +1,252 @@
-// import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { useTable } from '@pankod/refine-core';
+import { GridColDef, Box, Paper, Typography, Stack, TextField, Button } from '@pankod/refine-mui';
+import { Add } from '@mui/icons-material';
+import { useNavigate } from '@pankod/refine-react-router-v6';
+import CustomButton from 'components/common/CustomButton';
+import useDynamicHeight from 'hooks/useDynamicHeight';
+import CustomTable from 'components/common/CustomTable';
+import DeleteConfirmationDialog from 'components/common/DeleteConfirmationDialog';
+import useDeleteWithConfirmation from 'hooks/useDeleteWithConfirmation';
+import ErrorDialog from 'components/common/ErrorDialog';
+import LoadingDialog from 'components/common/LoadingDialog';
 
+const AllPressReleases = () => {
+  const navigate = useNavigate();
+  const containerHeight = useDynamicHeight();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
-// import {
-//   Box,
-//   Paper,
-//   Typography,
-//   Stack,
-//   TextField,
-//   Button,
-//   ButtonGroup,
-//   Chip,
-//   ChipProps,
-// } from "@mui/material";
+  const {
+    deleteConfirmation,
+    error: deleteError,
+    handleTableDelete,
+    confirmDelete,
+    cancelDelete,
+    isLoading: isDeleteLoading,
+    closeErrorDialog: closeDeleteErrorDialog,
+  } = useDeleteWithConfirmation({
+    resource: 'press-release',
+    redirectPath: '/press-release',
+  });
 
-// import { Add } from '@mui/icons-material';
-// import { useNavigate } from "react-router-dom";
-// import CustomButton from 'components/common/CustomButton';
-// import CustomTable from 'components/common/CustomTable';
-// import useDynamicHeight from 'hooks/useDynamicHeight';
-// import DeleteConfirmationDialog from 'components/common/DeleteConfirmationDialog';
-// import useDeleteWithConfirmation from 'hooks/useDeleteWithConfirmation';
-// import useRestoreWithConfirmation from 'hooks/useRestoreWithConfirmation';
+  const { 
+    tableQueryResult: { data, isLoading, isError }
+  } = useTable({
+    resource: 'press-release',
+    hasPagination: false,
+  });
 
+  const allPressReleases = data?.data ?? [];
 
-// import ErrorDialog from 'components/common/ErrorDialog';
-// import LoadingDialog from 'components/common/LoadingDialog';
-// import { useTable } from '@pankod/refine-core';
-// import { GridColDef } from '@pankod/refine-mui';
-// import { format } from 'date-fns';
+  const filteredRows = useMemo(() => {
+    return allPressReleases.filter((pressRelease) => {
+      const pressReleaseDate = pressRelease.date ? new Date(pressRelease.date) : null;
+      const matchesSearch = 
+        !searchTerm || 
+        pressRelease.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        pressRelease.publisher?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        pressRelease.seq?.toString().includes(searchTerm);
+        
+      const matchesDateRange = 
+        (!startDate || !pressReleaseDate || pressReleaseDate >= new Date(startDate)) &&
+        (!endDate || !pressReleaseDate || pressReleaseDate <= new Date(endDate));
 
+      return matchesSearch && matchesDateRange;
+    });
+  }, [allPressReleases, searchTerm, startDate, endDate]);
 
+  const columns: GridColDef[] = [
+    { field: 'seq', headerName: 'Seq', flex: 0.5, sortable: true },
+    { field: 'title', headerName: 'Title', flex: 2 },
+    { field: 'publisher', headerName: 'Publisher', flex: 1 },
+    { 
+      field: 'date', 
+      headerName: 'Date', 
+      flex: 1,
+      renderCell: (params) => (
+        <Typography variant="body2">
+          {params.row.date ? new Date(params.row.date).toLocaleDateString() : ''}
+        </Typography>
+      )
+    },
+    { 
+      field: 'createdAt', 
+      headerName: 'Created At', 
+      flex: 1,
+      renderCell: (params) => (
+        <Typography variant="body2">
+          {params.row.createdAt ? new Date(params.row.createdAt).toLocaleDateString() : ''}
+        </Typography>
+      )
+    },
+  ];
 
-// const AllPressRelease: React.FC = () => {
-//   const navigate = useNavigate();
-//   const containerHeight = useDynamicHeight();
-  
-//   // Search and filter states
-//   const [searchTerm, setSearchTerm] = useState('');
-//   const [startDate, setStartDate] = useState('');
-//   const [endDate, setEndDate] = useState('');
-//   const [statusFilter, setStatusFilter] = useState<string>('');
-  
-//   // Use both delete and restore hooks
-//   const {
-//     deleteConfirmation,
-//     error: deleteError,
-//     handleTableDelete,
-//     confirmDelete,
-//     cancelDelete,
-//     isLoading: isDeleteLoading,
-//     closeErrorDialog: closeDeleteErrorDialog,
-//   } = useDeleteWithConfirmation({
-//     resource: 'highlights',
-//     redirectPath: '/highlights',
-//   });
+  const handleView = (id: string) => {
+    navigate(`/press-release/show/${id}`);
+  };
 
-//   const {
-//     error: restoreError,
-//     handleTableRestore,
-//     isLoading: isRestoreLoading,
-//     closeErrorDialog: closeRestoreErrorDialog,
-//   } = useRestoreWithConfirmation({
-//     resource: 'highlights',
-//     redirectPath: '/highlights',
-//   });
+  const handleEdit = (id: string) => {
+    navigate(`/press-release/edit/${id}`);
+  };
 
-//   // Use refine's useTable hook with proper filters
-//   const { 
-//     tableQueryResult: { data, isLoading, isError }
-    
-//   } = useTable();
+  const rows = filteredRows.map((pressRelease) => ({
+    id: pressRelease._id,
+    _id: pressRelease._id,
+    seq: pressRelease.seq,
+    title: pressRelease.title,
+    publisher: pressRelease.publisher || '',
+    date: pressRelease.date,
+    createdAt: pressRelease.createdAt,
+  }));
 
-//   const allHighlights = (data?.data as Highlight[]) ?? [];
+  if (isLoading) {
+    return (
+      <LoadingDialog 
+        open={isLoading}
+        loadingMessage="Loading press releases data..."
+      />
+    );
+  }
 
-//   // Filter highlights based on search term and date range
-//   const filteredRows = useMemo(() => {
-//     return allHighlights.filter((highlight) => {
-//       // Check title for search term
-//       const titleMatch = highlight.title.toLowerCase().includes(searchTerm.toLowerCase());
+  if (isError) {
+    return (
+      <ErrorDialog 
+        open={true}
+        errorMessage="Error loading press releases data"
+      />
+    );
+  }
 
-//       // Check date range
-//       let dateMatch = true;
-//       if (highlight.date) {
-//         const highlightDate = new Date(highlight.date);
-//         if (startDate && new Date(startDate) > highlightDate) {
-//           dateMatch = false;
-//         }
-//         if (endDate && new Date(endDate) < highlightDate) {
-//           dateMatch = false;
-//         }
-//       }
-
-//       // Check status filter
-//       const statusMatch = !statusFilter || highlight.status === statusFilter;
-
-//       return titleMatch && dateMatch && statusMatch;
-//     });
-//   }, [allHighlights, searchTerm, startDate, endDate, statusFilter]);
-
-//   const columns: GridColDef[] = [
-//     { field: 'id', headerName: 'ID', flex: 0.5, sortable: true, hide: true },
-//     { field: 'title', headerName: 'Title', flex: 2, sortable: true },
-//     // add data field ( collumn name)
-//   ];
-
-//   const handleView = (id: string) => {
-//     navigate(`/press-release/show/${id}`);
-//   };
-
-//   const handleEdit = (id: string) => {
-//     navigate(`/press-release/edit/${id}`);
-//   };
-  
-//   const rows: TableRow[] = filteredRows.map((highlight) => ({
-//     id: highlight._id,
-//     title: highlight.title,
-//     date: highlight.date,
-//     // Add data fields here
-//   }));
-
-//   const handleStatusFilterChange = (status: string) => {
-//     setStatusFilter(status === statusFilter ? '' : status);
-//   };
-
-//   if (isLoading) {
-//     return (
-//       <LoadingDialog 
-//         open={isLoading}
-//         loadingMessage="Loading highlights data..."
-//       />
-//     );
-//   }
-
-//   if (isError) {
-//     return (
-//       <ErrorDialog 
-//         open={true}
-//         errorMessage="Error loading highlights data"
-//       />
-//     );
-//   }
-
-//   return (
-//     <Paper 
-//       elevation={3} 
-//       sx={{ 
-//         height: containerHeight,
-//         display: 'flex',
-//         flexDirection: 'column',
-//         m: 2,
-//         overflow: 'hidden'
-//       }}
-//     >
-//       <Typography 
-//         variant="h4" 
-//         sx={{ 
-//           p: 2,
-//           fontWeight: 600,
-//         }}
-//       >
-//         {!allHighlights.length ? 'No Highlights Records' : 'Highlights'}
-//       </Typography>
-      
-//       <Box sx={{ 
-//         p: 2,
-//         display: 'flex', 
-//         flexDirection: {xs: 'column', md: 'row'},
-//         gap: 2,
-//         alignItems: {xs: 'stretch', md: 'center'},
-//         justifyContent: 'space-between'
-//       }}>
-//         <Stack 
-//           direction={{ xs: 'column', sm: 'row' }} 
-//           spacing={2} 
-//           sx={{ flex: 1, alignItems: 'center' }}
-//         >
-//           <TextField
-//             size="small"
-//             label="Search"
-//             placeholder="Search by title"
-//             value={searchTerm}
-//             onChange={(e) => setSearchTerm(e.target.value)}
-//             sx={{ minWidth: '250px' }}
-//           />
-//           <TextField
-//             size="small"
-//             label="From Date"
-//             type="date"
-//             value={startDate}
-//             onChange={(e) => setStartDate(e.target.value)}
-//             InputLabelProps={{ shrink: true }}
-//           />
-//           <TextField
-//             size="small"
-//             label="To Date"
-//             type="date"
-//             value={endDate}
-//             onChange={(e) => setEndDate(e.target.value)}
-//             InputLabelProps={{ shrink: true }}
-//           />
-//           <ButtonGroup size="small" variant="outlined">
-//             <Button 
-//               color={statusFilter === 'draft' ? 'warning' : 'inherit'}
-//               onClick={() => handleStatusFilterChange('draft')}
-//             >
-//               Draft
-//             </Button>
-//             <Button 
-//               color={statusFilter === 'published' ? 'success' : 'inherit'} 
-//               onClick={() => handleStatusFilterChange('published')}
-//             >
-//               Published
-//             </Button>
-//             <Button 
-//               color={statusFilter === 'rejected' ? 'error' : 'inherit'}
-//               onClick={() => handleStatusFilterChange('rejected')}
-//             >
-//               Rejected
-//             </Button>
-//           </ButtonGroup>
-//         </Stack>
-
-//         <CustomButton
-//           title="Add Highlight"
-//           backgroundColor="primary.light"
-//           color="primary.dark"
-//           icon={<Add />}
-//           handleClick={() => navigate('/highlights/create')}
-//         />
-//       </Box>
-
-//       <Box sx={{ 
-//         flex: 1,
-//         width: '100%',
-//         overflow: 'hidden'
-//       }}>
-//         <CustomTable
-//           rows={rows}
-//           columns={columns}
-//           containerHeight="100%"
-//           onView={handleView}
-//           onEdit={handleEdit}
-//           onDelete={(ids) => handleTableDelete(ids, rows)}
-//           initialSortModel={[{ field: 'createdAt', sort: 'desc' }]}
-//         />
-//       </Box>
-
-//       {/* Delete Confirmation Dialog */}
-//       <DeleteConfirmationDialog
-//         open={deleteConfirmation.open}
-//         isDeleted={deleteConfirmation.isDeleted}
-//         contentText={`Are you sure you want to delete this highlight?`}
-//         onConfirm={confirmDelete}
-//         onCancel={cancelDelete}
-//       />
-
-//       {/* Loading Dialogs */}
-//       <LoadingDialog 
-//         open={isDeleteLoading} 
-//         loadingMessage="Deleting highlight..." 
-//       />
-//       <LoadingDialog 
-//         open={isRestoreLoading} 
-//         loadingMessage="Restoring highlight..." 
-//       />
-
-//       {/* Error Dialogs */}
-//       <ErrorDialog
-//         open={deleteError.open}
-//         errorMessage={deleteError.message}
-//         onClose={closeDeleteErrorDialog}
-//       />
-//       <ErrorDialog
-//         open={restoreError.open}
-//         errorMessage={restoreError.message}
-//         onClose={closeRestoreErrorDialog}
-//       />
-//     </Paper>
-//   );
-// };
-
-// export default AllPressRelease;
-
-
-import React from 'react'
-
-const AllPressPelease = () => {
   return (
-    <div></div>
+    <Paper 
+      elevation={3} 
+      sx={{ 
+        height: {
+          xs: '700px',
+          sm: '700px',
+          md: containerHeight,
+          lg: containerHeight,
+        },
+        display: 'flex',
+        flexDirection: 'column',
+        m: 2,
+        overflow: 'hidden'
+      }}
+    >
+      <Typography 
+        variant="h4" 
+        sx={{ 
+          p: 2,
+          fontWeight: 600,
+        }}
+      >
+        {!allPressReleases.length ? 'No Press Releases' : 'All Press Releases'}
+      </Typography>
+      
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: 'column',
+        gap: 2,
+        padding: 2,
+      }}>
+        {/* Search and Date Filter Grid */}
+        <Box 
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: '2fr 3fr auto' },
+            gap: 2,
+          }}
+        >
+          {/* Search Box */}
+          <Box>
+            <TextField
+              fullWidth
+              size="small"
+              label="Search"
+              placeholder="Search by title, publisher, or sequence"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </Box>
+
+          {/* Date Range */}
+          <Box 
+            sx={{ 
+              display: 'flex',
+              gap: 2,
+            }}
+          >
+            <TextField
+              fullWidth
+              size="small"
+              label="Start Date"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              fullWidth
+              size="small"
+              label="End Date"
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+          </Box>
+
+          {/* Add Button */}
+          <CustomButton
+            title="Add"
+            backgroundColor="primary.light"
+            color="primary.dark"
+            icon={<Add />}
+            handleClick={() => navigate(`/press-release/create`)}
+          />
+        </Box>
+      </Box>
+
+      <Box sx={{ 
+        flex: 1,
+        width: '100%',
+        overflow: 'hidden'
+      }}>
+        <CustomTable
+          rows={rows}
+          columns={columns}
+          containerHeight="100%"
+          onView={handleView}
+          onEdit={handleEdit}
+          onDelete={(ids) => handleTableDelete(ids, rows)}
+          initialSortModel={[{ field: 'date', sort: 'desc' }]}
+        />
+      </Box>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={deleteConfirmation.open}
+        contentText={deleteConfirmation.seq}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
+      
+      {/* Loading Dialog */}
+      <LoadingDialog 
+        open={isDeleteLoading} 
+        loadingMessage="Please wait..." 
+      />
+
+      {/* Error Dialog */}
+      <ErrorDialog
+        open={deleteError.open}
+        errorMessage={deleteError.message}
+        onClose={closeDeleteErrorDialog}
+      />
+    </Paper>
   );
 };
 
-export default AllPressPelease;
+export default AllPressReleases;

@@ -8,7 +8,7 @@ import AllHighlights from './all-highlights';
 import CreateHighlights from './create-highlights';
 import EditHighlights from './edit-highlights';
 import HighlightsPreview from './highlights-preview';
-
+import AllPressReleases from './all-pressrelease';
 
 
 export {
@@ -20,6 +20,7 @@ export {
   EditProperty,
 
   AllHighlights,
+  AllPressReleases,
   CreateHighlights,
   EditHighlights,
   HighlightsPreview,

@@ -29,6 +29,7 @@ import {
   Login,
   PropertyDetails,
   AllHighlights,
+  AllPressReleases,
   CreateHighlights,
   EditHighlights,
   HighlightsPreview,
@@ -36,6 +37,7 @@ import {
 import React from 'react';
 import UserManagement from 'pages/user-management';
 import { UnauthorizedPage } from 'pages/unauthorized';
+import CreatePressRelease from 'pages/create-pressrelease';
 
 
 
@@ -199,6 +201,12 @@ const App = () => {
               show: HighlightsPreview,
               create: CreateHighlights,
               edit: EditHighlights,
+              icon: <Star />,
+            },
+            {
+              name: 'press-release',
+              list: AllPressReleases,
+              create: CreatePressRelease,
               icon: <Star />,
             },
             {
