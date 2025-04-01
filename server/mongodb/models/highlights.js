@@ -12,7 +12,7 @@ const HighlightSchema = new mongoose.Schema({
     trim: true
   },
   sdg: {
-    type: [String], // Array of strings instead of ObjectIds
+    type: [String],
     required: false,
   },
   category: {
@@ -22,18 +22,18 @@ const HighlightSchema = new mongoose.Schema({
   },
   date: {
     type: Date,
-    required: false, // Optional as mentioned
+    required: false,
   },
   location: {
     type: String,
     required: false,
   },
-  images: {  // Changed from 'image' to 'images'
-    type: [String],  // Changed to array of strings
-    required: false,
+  images: {  
+    type: [String], // contains image URLs or paths to cloudinary storage
+    required: true,
   },
   content: {
-    type: String, // Store as rich text (HTML or Markdown)
+    type: String, // Store as rich text (HTML or Markdown) example: <p>This is the sample data for Content</p>
     required: true,
   },
   createdAt: {
@@ -47,7 +47,7 @@ const HighlightSchema = new mongoose.Schema({
     required: true
   }
 }, {
-  timestamps: true // This will add createdAt and updatedAt fields automatically
+  timestamps: true 
 });
 
 const Highlight = mongoose.model('Highlight', HighlightSchema);
