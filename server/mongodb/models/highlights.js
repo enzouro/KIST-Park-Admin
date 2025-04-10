@@ -17,11 +17,16 @@ const HighlightSchema = new mongoose.Schema({
   },
   category: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Catergory', // Reference to the Category model
+    ref: 'Category', // Reference to the Category model
     required: false,
   },
+// Modify the date fields
   date: {
-    type: Date,
+    type: String, // Change to String instead of Date
+    required: false,
+  },
+  createdAt: {
+    type: String, // Change to String instead of Date
     required: false,
   },
   location: {
@@ -35,10 +40,6 @@ const HighlightSchema = new mongoose.Schema({
   content: {
     type: String, // Store as rich text (HTML or Markdown) example: <p>This is the sample data for Content</p>
     required: true,
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now,
   },
   status: {
     type: String,

@@ -18,7 +18,7 @@ interface HighlightsCardProps {
     date: string | null;
     category?: {
       _id: string;
-      catergory: string;
+      category: string;
     };
     seq: number;
   };
@@ -109,7 +109,7 @@ const HighlightsCard = ({ highlight, onView }: HighlightsCardProps) => {
           />
           {highlight.category && (
             <Chip
-              label={highlight.category.catergory}
+              label={highlight.category.category}
               size="small"
               variant="outlined"
             />

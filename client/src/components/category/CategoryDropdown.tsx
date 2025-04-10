@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   TextField,
   Dialog,
@@ -22,7 +22,8 @@ interface CategoryDropdownProps {
 
 interface Category {
   _id: string;
-  catergory: string;
+  // Fixed typo in property name
+  category: string;
 }
 
 const CategoryDropdown = ({ value, onChange, error }: CategoryDropdownProps) => {
@@ -36,6 +37,43 @@ const CategoryDropdown = ({ value, onChange, error }: CategoryDropdownProps) => 
     }
   });
 
+  const getCategoryId = (val: any): string => {
+    if (!val) return '';
+    if (typeof val === 'string') return val;
+    if (typeof val === 'object' && val._id) return val._id;
+    return '';
+  };
+
+
+  useEffect(() => {
+    if (categoryData?.data) {
+      console.log('Available categories:', categoryData.data);
+      console.log('Current value:', value);
+    }
+  }, [categoryData, value]);
+
+  // Check if the value exists in available options
+// Modify the isValidValue check to handle initial loading state
+    const isValidValue = !isLoading && 
+        (categoryData?.data?.length ?? 0) > 0 && 
+        (value === '' || categoryData?.data?.some((item) => 
+          (item as Category)._id === getCategoryId(value)
+        )); 
+// Modify the useEffect to prevent unnecessary resets
+      useEffect(() => {
+        if (!isLoading && categoryData?.data?.length && value) {
+          const categoryId = getCategoryId(value);
+          const valueExists = categoryData.data.some(
+            (item) => (item as Category)._id === categoryId
+          );
+          
+          if (!valueExists) {
+            console.log('Invalid category ID, resetting...');
+            onChange('');
+          }
+        }
+      }, [categoryData, isLoading, value, onChange]);
+
   const { mutate, isLoading: isSubmitting } = useCreate();
 
   const handleAddCategory = async () => {
@@ -46,16 +84,16 @@ const CategoryDropdown = ({ value, onChange, error }: CategoryDropdownProps) => 
         {
           resource: 'categories',
           values: {
-            catergory: newCategory,
+
+            // Keep this as is if the backend API expects this spelling
+            category: newCategory,
           },
         },
         {
           onSuccess: (data) => {
-            // Change this line to use _id instead of catergory
             onChange(data.data._id);
             setNewCategory('');
             setOpen(false);
-            // Optionally refresh the categories list
             refetch();
           },
         },
@@ -85,15 +123,13 @@ const CategoryDropdown = ({ value, onChange, error }: CategoryDropdownProps) => 
       );
     }
 
-    return categoryData.data.map((item) => {
-      const category = item as Category;
-      return (
-        <MenuItem key={category._id} value={category._id}>
-          {category.catergory}
-        </MenuItem>
-      );
-    });
+    return (categoryData.data as Category[]).map((item) => (
+      <MenuItem key={item._id} value={item._id}>
+        {item.category} {/* Use the correct property name */}
+      </MenuItem>
+    ));
   };
+
 
   return (
     <>
@@ -101,7 +137,8 @@ const CategoryDropdown = ({ value, onChange, error }: CategoryDropdownProps) => 
         select
         fullWidth
         label="Category"
-        value={value}
+        // Only set value if it's valid or empty
+        value={isLoading ? '' : (isValidValue ? getCategoryId(value) : '')}
         onChange={(e) => onChange(e.target.value)}
         error={error}
         SelectProps={{

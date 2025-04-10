@@ -1,9 +1,9 @@
-import Catergory from '../mongodb/models/catergory.js';
+import Category from '../mongodb/models/category.js';
 
 // Get all categories
 const getAllCategories = async (req, res) => {
   try {
-    const categories = await Catergory.find({}).sort('catergory');
+    const categories = await Category.find({}).sort('category');
     res.status(200).json(categories);
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch categories' });
@@ -13,15 +13,15 @@ const getAllCategories = async (req, res) => {
 // Create a new category
 const createCategory = async (req, res) => {
   try {
-    const { catergory } = req.body;
+    const { category } = req.body;
     
     // Check if category already exists
-    const existingCategory = await Catergory.findOne({ catergory });
+    const existingCategory = await Category.findOne({ category });
     if (existingCategory) {
       return res.status(400).json({ message: 'Category already exists' });
     }
 
-    const newCategory = await Catergory.create({ catergory });
+    const newCategory = await Category.create({ category });
     res.status(201).json(newCategory);
   } catch (error) {
     res.status(500).json({ message: 'Failed to create category' });
@@ -32,11 +32,11 @@ const createCategory = async (req, res) => {
 const updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { catergory } = req.body;
+    const { category } = req.body;
 
-    const updatedCategory = await Catergory.findByIdAndUpdate(
+    const updatedCategory = await Category.findByIdAndUpdate(
       id,
-      { catergory },
+      { category },
       { new: true }
     );
 
@@ -55,7 +55,7 @@ const deleteCategory = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const deletedCategory = await Catergory.findByIdAndDelete(id);
+    const deletedCategory = await Category.findByIdAndDelete(id);
     
     if (!deletedCategory) {
       return res.status(404).json({ message: 'Category not found' });

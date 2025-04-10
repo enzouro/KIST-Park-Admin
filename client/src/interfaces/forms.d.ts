@@ -12,13 +12,17 @@ export interface PressReleaseFormValues {
   createdAt: string;
 }
 
+interface Category {
+  _id: string;
+}
+
 export interface HighlightsFormValues {
   seq: number;
   createdAt: string;
   title: string;
   date: string;
   location: string;
-  category: string; // Add category field
+  category?: Category | string;
   sdg: string[] | string;
   content: string;
   images: any[]; // Array of image URLs or objects

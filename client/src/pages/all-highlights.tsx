@@ -123,7 +123,7 @@ const AllHighlights = () => {
     _id: highlight._id,
     seq: highlight.seq,
     title: highlight.title,
-    category: highlight.category?.catergory || '',
+    category: highlight.category?.category || '',
     sdg: Array.isArray(highlight.sdg) ? highlight.sdg.join(', ') : highlight.sdg,
     date: highlight.date ? new Date(highlight.date).toLocaleDateString() : '',
     location: highlight.location || '',
@@ -175,162 +175,166 @@ const AllHighlights = () => {
         {!allHighlights.length ? 'No Highlights Records' : 'All Highlights'}
       </Typography>
       
-      <Box sx={{ 
-        display: 'flex', 
-        flexDirection: 'column',
-        gap: 2,
-        padding: 2,
-      }}>
-        {/* Search and Date Filter Grid */}
-        <Box 
+
+<Box sx={{ 
+  display: 'flex', 
+  flexDirection: 'column',
+  gap: 1.5,  // Reduced from 2
+  padding: 1.5,  // Reduced from 2
+}}>
+  {/* Search and Date Filter Grid */}
+  <Box 
+    sx={{
+      display: 'grid',
+      gridTemplateColumns: { xs: '1fr', md: '2fr 3fr auto' },
+      gap: 1,  // Added small gap between grid items
+    }}
+  >
+    {/* Search Box */}
+    <Box sx={{ p: 1 }}>  {/* Reduced padding from 2 to 1 */}
+      <TextField
+        fullWidth
+        size="small"
+        label="Search"
+        placeholder="Search by title, location, or sequence"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
+    </Box>
+
+    {/* Date Range */}
+    <Box 
+      sx={{ 
+        p: 1,  // Reduced padding from 2 to 1
+        display: 'flex',
+        gap: 1,  // Reduced gap from 2 to 1
+      }}
+    >
+      <TextField
+        fullWidth
+        size="small"
+        label="Start Date"
+        type="date"
+        value={startDate}
+        onChange={(e) => setStartDate(e.target.value)}
+        InputLabelProps={{ shrink: true }}
+      />
+      <TextField
+        fullWidth
+        size="small"
+        label="End Date"
+        type="date"
+        value={endDate}
+        onChange={(e) => setEndDate(e.target.value)}
+        InputLabelProps={{ shrink: true }}
+      />
+    </Box>
+
+    {/* Add Button */}
+    <Box sx={{ p: 1 }}>  {/* Added padding container for alignment */}
+      <CustomButton
+        title="Add"
+        backgroundColor="primary.light"
+        color="primary.dark"
+        icon={<Add />}
+        handleClick={() => navigate(`/highlights/create`)}
+      />
+    </Box>
+  </Box>
+
+  {/* Status and Category Filter Grid */}
+  <Box 
+    sx={{
+      display: 'grid',
+      gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' },
+      gap: 1,  // Added small gap between grid items
+    }}
+  >
+    {/* Status Filter */}
+    <Box sx={{ p: 1 }}>  {/* Reduced padding from 2 to 1 */}
+      <ButtonGroup fullWidth size="small">  {/* Added size="small" for a more compact look */}
+        <Button
+          variant={statusFilter === 'all' ? 'contained' : 'outlined'}
+          onClick={() => setStatusFilter('all')}
           sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', md: '2fr 3fr auto' },
+            backgroundColor: statusFilter === 'all' ? 'primary.light' : 'inherit',
+            color: statusFilter === 'all' ? 'primary.contrastText' : 'inherit',
           }}
         >
-          {/* Search Box */}
-          <Box 
-           padding={2}
-            sx={{ p: 2 }}
-          >
-            <TextField
-              fullWidth
-              size="small"
-              label="Search"
-              placeholder="Search by title, location, or sequence"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </Box>
-
-          {/* Date Range */}
-          <Box 
-          
-            sx={{ 
-              p: 2,
-              display: ' flex',
-              gap: 2,
-            }}
-          >
-            <TextField
-              fullWidth
-              size="small"
-              label="Start Date"
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              fullWidth
-              size="small"
-              label="End Date"
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-            />
-          </Box>
-
-          {/* Add Button */}
-          <CustomButton
-            title="Add"
-            backgroundColor="primary.light"
-            color="primary.dark"
-            icon={<Add />}
-            handleClick={() => navigate(`/highlights/create`)}
-          />
-        </Box>
-
-        {/* Status and Category Filter Grid */}
-        <Box 
+          All
+        </Button>
+        <Button
+          variant={statusFilter === 'draft' ? 'contained' : 'outlined'}
+          onClick={() => setStatusFilter('draft')}
           sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' },
+            backgroundColor: statusFilter === 'draft' ? 'warning.light' : 'inherit',
+            color: statusFilter === 'draft' ? 'warning.contrastText' : 'inherit',
           }}
         >
-          {/* Status Filter */}
-          <Box 
-            sx={{ p: 2 }}
-          >
-            <ButtonGroup fullWidth>
-              <Button
-                variant={statusFilter === 'all' ? 'contained' : 'outlined'}
-                onClick={() => setStatusFilter('all')}
-                sx={{
-                  backgroundColor: statusFilter === 'all' ? 'primary.light' : 'inherit',
-                  color: statusFilter === 'all' ? 'primary.contrastText' : 'inherit',
-                }}
-              >
-                All
-              </Button>
-              <Button
-                variant={statusFilter === 'draft' ? 'contained' : 'outlined'}
-                onClick={() => setStatusFilter('draft')}
-                sx={{
-                  backgroundColor: statusFilter === 'draft' ? 'warning.light' : 'inherit',
-                  color: statusFilter === 'draft' ? 'warning.contrastText' : 'inherit',
-                }}
-              >
-                Draft
-              </Button>
-              <Button
-                variant={statusFilter === 'published' ? 'contained' : 'outlined'}
-                onClick={() => setStatusFilter('published')}
-                sx={{
-                  backgroundColor: statusFilter === 'published' ? 'success.light' : 'inherit',
-                  color: statusFilter === 'published' ? 'success.contrastText' : 'inherit',
-                }}
-              >
-                Published
-              </Button>
-              <Button
-                variant={statusFilter === 'rejected' ? 'contained' : 'outlined'}
-                onClick={() => setStatusFilter('rejected')}
-                sx={{
-                  backgroundColor: statusFilter === 'rejected' ? 'error.light' : 'inherit',
-                  color: statusFilter === 'rejected' ? 'error.contrastText' : 'inherit',
-                }}
-              >
-                Rejected
-              </Button>
-            </ButtonGroup>
-          </Box>
+          Draft
+        </Button>
+        <Button
+          variant={statusFilter === 'published' ? 'contained' : 'outlined'}
+          onClick={() => setStatusFilter('published')}
+          sx={{
+            backgroundColor: statusFilter === 'published' ? 'success.light' : 'inherit',
+            color: statusFilter === 'published' ? 'success.contrastText' : 'inherit',
+          }}
+        >
+          Published
+        </Button>
+        <Button
+          variant={statusFilter === 'rejected' ? 'contained' : 'outlined'}
+          onClick={() => setStatusFilter('rejected')}
+          sx={{
+            backgroundColor: statusFilter === 'rejected' ? 'error.light' : 'inherit',
+            color: statusFilter === 'rejected' ? 'error.contrastText' : 'inherit',
+          }}
+        >
+          Rejected
+        </Button>
+      </ButtonGroup>
+    </Box>
 
-          {/* Category Filter */}
-          <Box 
-            sx={{ 
-              p: 2,
-              display: 'flex',
-            }}
-          >
-            <TextField
-              select
-              fullWidth
-              size="small"
-              label="Category Filter"
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-            >
-              <MenuItem value="all">All Categories</MenuItem>
-              {categories.map((category) => (
-                <MenuItem key={category._id} value={category._id}>
-                  {category.catergory}
-                </MenuItem>
-              ))}
-            </TextField>
-            <IconButton
-              onClick={() => setCategoryManageOpen(true)}
-              sx={{ 
-                bgcolor: 'grey.100',
-                '&:hover': { bgcolor: 'grey.200' }
-              }}
-            >
-              <Settings />
-            </IconButton>
-          </Box>
-        </Box>
-      </Box>
+    {/* Category Filter */}
+    <Box 
+      sx={{ 
+        p: 1,  // Reduced padding from 2 to 1
+        display: 'flex',
+        gap: 0.5,  // Added small gap between elements
+      }}
+    >
+      <TextField
+        select
+        fullWidth
+        size="small"
+        label="Category Filter"
+        value={categoryFilter}
+        onChange={(e) => setCategoryFilter(e.target.value)}
+      >
+        <MenuItem value="all">All Categories</MenuItem>
+        {categories.map((category) => (
+          <MenuItem key={category._id} value={category._id}>
+            {category.category}
+          </MenuItem>
+        ))}
+      </TextField>
+      <IconButton
+        size="small"  // Reduced size from default to small
+        onClick={() => setCategoryManageOpen(true)}
+        sx={{ 
+          bgcolor: 'grey.100',
+          '&:hover': { bgcolor: 'grey.200' }
+        }}
+      >
+        <Settings fontSize="small" />  {/* Made icon smaller */}
+      </IconButton>
+    </Box>
+  </Box>
+</Box>
+
+        
+        {/* Table Container */}
       <Box sx={{ 
         flex: 1,
         width: '100%',

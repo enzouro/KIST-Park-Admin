@@ -41,7 +41,7 @@ const CategoryManage = () => {
     createMutate({
       resource: 'categories',
       values: {
-        catergory: newCategory,
+        category: newCategory,
       },
     });
     
@@ -60,7 +60,7 @@ const CategoryManage = () => {
       resource: 'categories',
       id: editCategory.id,
       values: {
-        catergory: editCategory.name,
+        category: editCategory.name,
       },
     });
 
@@ -110,11 +110,11 @@ const CategoryManage = () => {
               mb: 1,
             }}
           >
-            <ListItemText primary={category.catergory} />
+            <ListItemText primary={category.category} />
             <ListItemSecondaryAction>
               <IconButton
                 edge="end"
-                onClick={() => handleEdit(category._id, category.catergory)}
+                onClick={() => handleEdit(category._id, category.category)}
                 sx={{ mr: 1 }}
               >
                 <Edit />

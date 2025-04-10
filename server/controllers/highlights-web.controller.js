@@ -4,7 +4,7 @@ import Highlight from '../mongodb/models/highlights.js'; // Import the Highlight
 export const getAllHighlights = async (req, res) => {
   try {
     const highlights = await Highlight.find()
-      .populate('category', 'catergory') // Populate the category field
+      .populate('category', 'category') // Populate the category field
       .sort({ date: -1 }); // Sort by date in descending order
 
     res.status(200).json(highlights);
@@ -20,7 +20,7 @@ export const getHighlightById = async (req, res) => {
     const { id } = req.params;
 
     const highlight = await Highlight.findById(id)
-      .populate('category', 'catergory'); // Populate the category field
+      .populate('category', 'category'); // Populate the category field
 
     if (!highlight) {
       return res.status(404).json({ message: 'Highlight not found' });
