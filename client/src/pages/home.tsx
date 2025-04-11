@@ -14,6 +14,7 @@ import {
   Paper
 } from '@pankod/refine-mui';
 import HighlightsCard from 'components/dashboard/HighlightsCard';
+import PressReleaseCard from 'components/dashboard/PressReleaseCard';
 import { Construction } from '@mui/icons-material';
 import { MenuItem, TextField } from '@mui/material';
 import { useNavigate } from '@pankod/refine-react-router-v6';
@@ -35,6 +36,16 @@ interface Highlight {
     catergory: string;
   };
   images:string[];
+  seq: number;
+}
+
+interface PressRelease {
+  _id: string;
+  title: string;
+  publisher: string;
+  date: string;
+  link: string;
+  image: string[];
   seq: number;
 }
 
@@ -75,16 +86,15 @@ const Home = () => {
     return highlight.category?._id === selectedCategory;
   });
 
-  // Debug the data structure
+  // Add this query for press releases
+  const { data: pressReleasesData, isLoading: pressReleasesLoading } = useList<PressRelease>({
+    resource: "press-release",
+  });
 
-
-  // const { data: pressReleasesData } = useList({
-  //   resource: "press-releases",
-  //   config: {
-  //     pagination: { pageSize: 6 },
-  //     sort: [{ field: "date", order: "desc" }]
-  //   }
-  // });
+  // Add this handler for press release view
+  const handlePressReleaseView = (id: string) => {
+    navigate(`/press-release/show/${id}`);
+  };
 
   if (isLoading) {
     return <Box sx={{ p: 2 }}>Loading...</Box>;
@@ -166,14 +176,18 @@ const Home = () => {
         </Grid>
       </TabPanel>
 
-        <TabPanel value={tabValue} index={1}>
-          <Typography
-            variant="h6"
-            sx={{ p: 2 }}
-          > 
-          Under Construction <Construction fontSize="large" />
-          </Typography>
-        </TabPanel>
+      <TabPanel value={tabValue} index={1}>
+        <Grid container spacing={3}>
+          {pressReleasesData?.data.map((pressRelease: PressRelease) => (
+            <Grid item key={pressRelease._id} xs={12} sm={6} md={4}>
+              <PressReleaseCard 
+                pressRelease={pressRelease}
+                onView={() => handlePressReleaseView(pressRelease._id)}
+              />
+            </Grid>
+          ))}
+        </Grid>
+      </TabPanel>
       </Paper>
     </Box>
   );

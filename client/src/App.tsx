@@ -30,6 +30,8 @@ import {
   PropertyDetails,
   AllHighlights,
   AllPressReleases,
+  EditPressRelease,
+  PressReleasePreview,
   CreateHighlights,
   EditHighlights,
   HighlightsPreview,
@@ -38,7 +40,6 @@ import React from 'react';
 import UserManagement from 'pages/user-management';
 import { UnauthorizedPage } from 'pages/unauthorized';
 import CreatePressRelease from 'pages/create-pressrelease';
-
 
 
 const axiosInstance = axios.create();
@@ -207,6 +208,8 @@ const App = () => {
               name: 'press-release',
               list: AllPressReleases,
               create: CreatePressRelease,
+              edit: EditPressRelease,
+              show: PressReleasePreview,
               icon: <Star />,
             },
             {
