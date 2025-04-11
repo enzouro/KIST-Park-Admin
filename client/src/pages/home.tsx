@@ -33,7 +33,7 @@ interface Highlight {
   date: string;
   category: {
     _id: string;
-    catergory: string;
+    category: string;
   };
   images:string[];
   seq: number;
@@ -160,7 +160,7 @@ const Home = () => {
               <MenuItem value="all">All Categories</MenuItem>
               {categoriesData?.data.map((category: any) => (
                 <MenuItem key={category._id} value={category._id}>
-                  {category.catergory}
+                  {category.category}
                 </MenuItem>
               ))}
             </TextField>

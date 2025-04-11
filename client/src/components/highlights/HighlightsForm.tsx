@@ -1,10 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { 
   Box, 
   CircularProgress, 
   FormControl, 
-  InputLabel, 
-  OutlinedInput, 
   Paper, 
   TextField, 
   Typography 
@@ -13,19 +11,16 @@ import { Controller } from 'react-hook-form';
 import { Close, Publish } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
-
-import { HighlightsFormProps } from 'interfaces/forms';
+import { HighlightsFormProps, HighlightsFormValues } from 'interfaces/forms';
 import CustomButton from 'components/common/CustomButton';
 import RichTextArea from 'components/highlights/RichTextArea';
 import ImageUploader from './ImageUploader';
 import SDGSelect from './SDGDropdown';
 import CategoryDropdown from 'components/category/CategoryDropdown';
 import useNextSequence from 'hooks/useNextSequence';
+import { formatDateForInput } from 'utils/dateHelper'; // Import the utility function
 
-
-
-
-const status = [
+const STATUS_OPTIONS = [
   { value: 'rejected', label: 'Rejected' },
   { value: 'draft', label: 'Draft' },
   { value: 'published', label: 'Published' },
@@ -39,11 +34,9 @@ const getTodayDate = () => {
   return `${year}-${month}-${day}`;
 };
 
-
-
 const HighlightsForm: React.FC<HighlightsFormProps> = ({ 
   type, 
-  initialValues,
+  initialValues = {},
   onFinishHandler,
   handleSubmit,
   register,
@@ -52,8 +45,7 @@ const HighlightsForm: React.FC<HighlightsFormProps> = ({
   user
 }) => {
   const navigate = useNavigate();
-
-  
+  const isCreating = type === 'Create';
   
   // Get the next sequence number
   const { currentSeq, isLoading: sequenceLoading } = useNextSequence({
@@ -61,34 +53,35 @@ const HighlightsForm: React.FC<HighlightsFormProps> = ({
     type: type as "Create" | "Edit",
     initialValues: initialValues?.seq ? { seq: Number(initialValues.seq) } : undefined,
   });
-
-  useEffect(() => {
-    console.log('Current Sequence:', currentSeq);
-    console.log('Sequence Loading:', sequenceLoading);
-  }, [currentSeq, sequenceLoading]);
-
   
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: HighlightsFormValues) => {
     if (currentSeq === null) {
-      console.error('No sequence number available');
       return;
     }
   
+    // Process SDG data - only join if it's an array
     const formattedSdg = Array.isArray(data.sdg) ? data.sdg.join(', ') : data.sdg;
     
-    // Ensure images is an array of strings
-    const images = Array.isArray(data.images) ? data.images : [];
+    // Ensure images array is properly formatted
+    const images = Array.isArray(data.images) 
+      ? data.images.filter(Boolean) // Remove any null/undefined values
+      : [];
+
+  // Ensure category is a valid MongoDB ObjectId or empty string
+  const categoryId = data.category && typeof data.category === 'object' 
+    ? data.category._id 
+    : (data.category || '');
     
     const updatedData = { 
       ...data,
       seq: currentSeq,
       sdg: formattedSdg,
-      category: data.category,
+      category: categoryId, // Just pass the category ID
       email: user.email,
-      images: images // Make sure this is included
+      images: images,
+      createdAt: isCreating ? getTodayDate() : data.createdAt
     };
     
-    console.log('Submitting data:', updatedData); // Add this for debugging
     await onFinishHandler(updatedData);
     navigate('/highlights');
   };
@@ -97,9 +90,10 @@ const HighlightsForm: React.FC<HighlightsFormProps> = ({
     return <CircularProgress />;
   }
 
+  // Format dates for the form display
+  const formCreatedAt = formatDateForInput(isCreating ? new Date() : initialValues?.createdAt);
+  const formEventDate = formatDateForInput(initialValues?.date);
 
-  
-  
   return (
     <Paper 
       elevation={2} 
@@ -152,13 +146,13 @@ const HighlightsForm: React.FC<HighlightsFormProps> = ({
           </FormControl>
 
           <FormControl>
-          <TextField
-                label="Created At"
-                type="date"
-                {...register('createdAt')}
-                value={ getTodayDate()}
-                InputLabelProps={{ shrink: true }}
-              />
+            <TextField
+              label="Created At"
+              type="date"
+              {...register('createdAt')}
+              defaultValue={formCreatedAt} // Use formatted date here
+              InputLabelProps={{ shrink: true }}
+            />
           </FormControl>
         </Box>
 
@@ -174,6 +168,7 @@ const HighlightsForm: React.FC<HighlightsFormProps> = ({
             {...register('title')}
             error={!!errors?.title}
             defaultValue={initialValues?.title || ''}
+            required
           />
         </Box>
 
@@ -184,14 +179,14 @@ const HighlightsForm: React.FC<HighlightsFormProps> = ({
           '& .MuiFormControl-root': { flex: 1 }
         }}>
           <FormControl>
-          <TextField
-                label="Date"
-                type="date"
-                {...register('date')}
-                defaultValue={initialValues?.date || ''}
-                InputLabelProps={{ shrink: true }}
-              />
-
+            <TextField
+              label="Event Date" // Clarified label
+              type="date"
+              {...register('date')}
+              defaultValue={formEventDate || ''} // Use formatted date here
+              InputLabelProps={{ shrink: true }}
+              helperText="Date when the event happened"
+            />
           </FormControl>
           <TextField
             label="Location"
@@ -207,43 +202,45 @@ const HighlightsForm: React.FC<HighlightsFormProps> = ({
           gap: 2,
           '& .MuiFormControl-root': { flex: 1 }
         }}>
+          
           <Controller
             name="category"
             control={control}
-            defaultValue={initialValues?.category || ''}
+            defaultValue={initialValues?.category?._id || initialValues?.category || ''}// Simplify this
             render={({ field }) => (
               <CategoryDropdown
                 value={field.value}
-                onChange={field.onChange}
+                onChange={(value) => {
+                  field.onChange(value);
+                }}
                 error={!!errors?.category}
               />
-            )} />
-
-
-            <Controller
-                name="status"
-                control={control}
-                defaultValue={initialValues?.status || 'draft'}
-                render={({ field }) => (
-                  <TextField
-                    select
-                    label="Status"
-                    value={field.value}
-                    onChange={field.onChange}
-                    helperText="Please select the status"
-                    variant="filled"
-                    SelectProps={{
-                      native: true,
-                    }}
-                  >
-                    {status.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </TextField>
-                )}
-              />
+            )} 
+          />
+          <Controller
+            name="status"
+            control={control}
+            defaultValue={initialValues?.status || 'draft'}
+            render={({ field }) => (
+              <TextField
+                select
+                label="Status"
+                value={field.value}
+                onChange={field.onChange}
+                helperText="Please select the status"
+                variant="filled"
+                SelectProps={{
+                  native: true,
+                }}
+              >
+                {STATUS_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </TextField>
+            )}
+          />
         </Box>
 
         {/* SDG Selection component */}
@@ -286,28 +283,28 @@ const HighlightsForm: React.FC<HighlightsFormProps> = ({
           '& .MuiFormControl-root': { flex: 1 }
         }}>
           <Controller
-              name="images"
-              control={control}
-              defaultValue={initialValues?.images || []}
-              render={({ field }) => (
-                  <ImageUploader
-                      value={field.value}
-                      onChange={(newImages) => field.onChange(newImages)}
-                  />
-              )}
+            name="images"
+            control={control}
+            defaultValue={initialValues?.images || []}
+            render={({ field }) => (
+              <ImageUploader
+                value={field.value}
+                onChange={(newImages) => field.onChange(newImages)}
+              />
+            )}
           />
         </Box>
 
         <Box display="flex" justifyContent="center" gap={2} mt={3}>
           <CustomButton
             type="submit"
-            title="Publish"
+            title={isCreating ? "Create" : "Update"}
             backgroundColor="primary.light"
             color="primary.dark"
             icon={<Publish />}
           />
           <CustomButton
-            title="Close"
+            title="Cancel"
             backgroundColor="error.light"
             color="error.dark"
             icon={<Close />}

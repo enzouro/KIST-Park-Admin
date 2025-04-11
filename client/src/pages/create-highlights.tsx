@@ -27,9 +27,9 @@ const CreateHighlights = () => {
     },
     defaultValues: {
       seq: '',
-      createdAt: '',
-      title: '',
+      createdAt: new Date().toISOString().split('T')[0],
       date: '',
+      title: '',
       location: '',
       category: '',
       sdg: [], 

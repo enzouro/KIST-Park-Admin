@@ -9,6 +9,7 @@ import userManagementRoutes from './routes/userManagement.routes.js';
 import highlightsRoutes from './routes/highlights.routes.js';
 import categoryRouter from './routes/category.routes.js';
 import pressReleaseRouter from './routes/press-release.routes.js';
+import highlightsWebRoutes from './routes/highlights-web.routes.js';
 
 dotenv.config();
 
@@ -27,7 +28,11 @@ app.use('/api/v1/properties', propertyRouter);
 app.use('/api/v1/user-management', userManagementRoutes);
 app.use('/api/v1/highlights', highlightsRoutes);
 app.use('/api/v1/categories', categoryRouter);
+
 app.use('/api/v1/press-release', pressReleaseRouter);
+
+app.use('/api/v1/highlights-web', highlightsWebRoutes);
+
 
 const startServer = async () => {
   try {
