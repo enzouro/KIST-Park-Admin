@@ -4,7 +4,6 @@ import cors from 'cors';
 
 import connectDB from './mongodb/connect.js';
 import userRouter from './routes/user.routes.js';
-import propertyRouter from './routes/property.routes.js';
 import userManagementRoutes from './routes/userManagement.routes.js';
 import highlightsRoutes from './routes/highlights.routes.js';
 import categoryRouter from './routes/category.routes.js';
@@ -24,7 +23,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/v1/users', userRouter);
-app.use('/api/v1/properties', propertyRouter);
+
 app.use('/api/v1/user-management', userManagementRoutes);
 app.use('/api/v1/highlights', highlightsRoutes);
 app.use('/api/v1/categories', categoryRouter);

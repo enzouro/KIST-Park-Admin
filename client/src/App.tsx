@@ -22,12 +22,10 @@ import { CredentialResponse } from 'interfaces/google';
 import { parseJwt } from 'utils/parse-jwt';
 
 import {
-  AllProperties,
-  CreateProperty,
-  EditProperty,
+
   Home,
   Login,
-  PropertyDetails,
+
   AllHighlights,
   AllPressReleases,
   EditPressRelease,
@@ -211,14 +209,6 @@ const App = () => {
               edit: EditPressRelease,
               show: PressReleasePreview,
               icon: <Star />,
-            },
-            {
-              name: 'properties',
-              list: AllProperties,
-              show: PropertyDetails,
-              create: CreateProperty,
-              edit: EditProperty,
-              icon: <VillaOutlined />,
             },
             // Admin-only resource
             ...(isAdmin ? [{
