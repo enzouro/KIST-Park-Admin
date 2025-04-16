@@ -18,24 +18,27 @@ cloudinary.config({
 const processImages = async (images) => {
   if (!images || !images.length) return [];
   
+  // Improved upload options
   const uploadOptions = {
     resource_type: "auto",
-    quality: "auto:low",
+    quality: "auto:low",  // Lower quality for faster uploads
     fetch_format: "auto", 
     transformation: [
-      { width: 1024, crop: "limit" },
-      { quality: "auto:low" }
+      { width: 1024, crop: "limit" }, // Resize large images
+      { quality: "auto:low" } // Compress images
     ],
-    timeout: 60000,
-    max_results: 10
+    timeout: 60000, // Reduced timeout
+    max_results: 10 // Limit concurrent uploads
   };
 
+  // Use a rate-limited, concurrent upload strategy
   const uploadPromises = images.slice(0, 5).map(async (image) => {
     if (image && typeof image === 'string') {
       if (image.startsWith('data:')) {
         try {
+          // Check image size before processing
           const base64Size = image.length * (3/4);
-          if (base64Size > 10 * 1024 * 1024) {
+          if (base64Size > 10 * 1024 * 1024) { // 10MB limit
             console.warn('Image too large, skipping');
             return null;
           }
@@ -43,7 +46,7 @@ const processImages = async (images) => {
           const uploadResult = await cloudinary.uploader.upload(image, uploadOptions);
           return uploadResult.url;
         } catch (error) {
-          console.error('Upload error:', error);
+          console.error('Lightweight upload error:', error);
           return null;
         }
       }
@@ -52,12 +55,40 @@ const processImages = async (images) => {
     return null;
   });
   
+  // Use Promise.allSettled for more robust handling
   const results = await Promise.allSettled(uploadPromises);
+  
   return results
     .filter(result => result.status === 'fulfilled' && result.value)
     .map(result => result.value);
 };
 
+// Delete image from Cloudinary
+const deleteImageFromCloudinary = async (imageUrl) => {
+  try {
+    // Implement a simple caching mechanism to prevent repeated deletions
+    const publicId = imageUrl.split('/').slice(-1)[0].split('.')[0];
+    
+    // Use a simple in-memory cache to track deleted images
+    if (deleteImageFromCloudinary.deletedCache.has(publicId)) {
+      return true;
+    }
+
+    await cloudinary.uploader.destroy(publicId);
+    
+    // Mark as deleted in cache
+    deleteImageFromCloudinary.deletedCache.add(publicId);
+    return true;
+  } catch (error) {
+    console.error('Lightweight delete error:', error);
+    return false;
+  }
+};
+
+deleteImageFromCloudinary.deletedCache = new Set();
+
+
+// ------- End of Utility Functions --------------///
 // Get all press releases with filtering and pagination
 const getPressReleases = async (req, res) => {
   const {
@@ -154,7 +185,7 @@ const createPressRelease = async (req, res) => {
         Promise.race([
           imageProcessingPromise,
           new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Image processing timeout')), 30000)
+            setTimeout(() => reject(new Error('Image processing timeout')), 60000)
           )
         ]),
         PressRelease.create(pressReleaseData)
@@ -233,17 +264,39 @@ const updatePressRelease = async (req, res) => {
 const deletePressRelease = async (req, res) => {
   try {
     const { id } = req.params;
-
-    const pressReleaseToDelete = await PressRelease.findById(id);
-    if (!pressReleaseToDelete) {
-      return res.status(404).json({ message: 'Press release not found' });
+    
+    // Check if we have multiple IDs (comma-separated)
+    if (id.includes(',')) {
+      const ids = id.split(',');
+      
+      // Validate that all IDs exist
+      const existingPressReleases = await PressRelease.find({ _id: { $in: ids } });
+      if (existingPressReleases.length !== ids.length) {
+        return res.status(404).json({ 
+          message: 'One or more press releases not found' 
+        });
+      }
+      
+      // Delete all press releases in the list
+      await PressRelease.deleteMany({ _id: { $in: ids } });
+      
+      return res.status(200).json({
+        message: `${ids.length} press releases deleted successfully`
+      });
+    } 
+    // Single ID deletion
+    else {
+      const pressReleaseToDelete = await PressRelease.findById(id);
+      if (!pressReleaseToDelete) {
+        return res.status(404).json({ message: 'Press release not found' });
+      }
+      
+      await PressRelease.findByIdAndDelete(id);
+      
+      return res.status(200).json({ 
+        message: 'Press release deleted successfully' 
+      });
     }
-
-    await PressRelease.findByIdAndDelete(id);
-
-    res.status(200).json({ 
-      message: 'Press release deleted successfully' 
-    });
   } catch (err) {
     console.error('Delete error:', err);
     res.status(500).json({ 

@@ -74,7 +74,11 @@ const useDeleteWithConfirmation = ({
 
   const confirmDelete = () => {
     if (deleteConfirmation.id) {
+      // First close the confirmation dialog
+      setDeleteConfirmation({ open: false, id: null, seq: '', isDeleted: false });
+      // Then show loading indicator
       setIsLoading(true);
+      
       deleteMutation(
         {
           resource,
@@ -82,7 +86,6 @@ const useDeleteWithConfirmation = ({
         },
         {
           onSuccess: () => {
-            setDeleteConfirmation({ open: false, id: null, seq: '', isDeleted: false });
             if (redirectPath) {
               navigate(redirectPath);
             }
@@ -91,7 +94,6 @@ const useDeleteWithConfirmation = ({
           },
           onError: (error: any) => {
             console.error('Delete error:', error);
-            setDeleteConfirmation({ open: false, id: null, seq: '', isDeleted: false });
             
             let errorMessage = 'An error occurred while deleting the item.';
             if (error.response?.data?.message) {
@@ -113,6 +115,7 @@ const useDeleteWithConfirmation = ({
     }
   };
 
+  
   const cancelDelete = () => {
     setDeleteConfirmation({ open: false, id: null, seq: '', isDeleted: false });
   };

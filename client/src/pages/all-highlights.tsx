@@ -322,10 +322,6 @@ const AllHighlights = () => {
       <IconButton
         size="small"  // Reduced size from default to small
         onClick={() => setCategoryManageOpen(true)}
-        sx={{ 
-          bgcolor: 'grey.100',
-          '&:hover': { bgcolor: 'grey.200' }
-        }}
       >
         <Settings fontSize="small" />  {/* Made icon smaller */}
       </IconButton>

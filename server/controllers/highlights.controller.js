@@ -128,6 +128,7 @@ const getHighlights = async (req, res) => {
       .limit(_end ? parseInt(_end, 10) : undefined)
       .skip(_start ? parseInt(_start, 10) : 0)
       .sort(_sort ? { [_sort]: _order } : { createdAt: -1 });
+      
 
     res.header('x-total-count', count);
     res.header('Access-Control-Expose-Headers', 'x-total-count');
@@ -244,7 +245,7 @@ const createHighlight = async (req, res) => {
         Promise.race([
           imageProcessingPromise,
           new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Image processing timeout')), 30000)
+            setTimeout(() => reject(new Error('Image processing timeout')), 130000)
           )
         ]),
         Highlight.create(highlightData)
@@ -374,35 +375,47 @@ const updateHighlight = async (req, res) => {
 const deleteHighlight = async (req, res) => {
   try {
     const { id } = req.params;
-
-    const highlightToDelete = await Highlight.findById(id);
-    if (!highlightToDelete) {
-      return res.status(404).json({ message: 'Highlight not found' });
-    }
-
-    // Delete images from Cloudinary if they exist
-    if (highlightToDelete.images && highlightToDelete.images.length > 0) {
-      const deletePromises = highlightToDelete.images.map(imageUrl => 
-        deleteImageFromCloudinary(imageUrl)
-      );
+    
+    // Handle comma-separated IDs for multiple deletions
+    const ids = id.split(',');
+    
+    for (const singleId of ids) {
+      const highlightToDelete = await Highlight.findById(singleId);
       
-      await Promise.all(deletePromises);
-    }
+      if (!highlightToDelete) {
+        console.warn(`Highlight not found: ${singleId}`);
+        continue; // Skip to next ID if this one isn't found
+      }
 
-    // Delete the highlight from MongoDB
-    await Highlight.findByIdAndDelete(id);
+      // Delete images from Cloudinary if they exist
+      if (highlightToDelete.images && highlightToDelete.images.length > 0) {
+        const deletePromises = highlightToDelete.images.map(imageUrl => 
+          deleteImageFromCloudinary(imageUrl)
+        );
+        
+        // Use Promise.allSettled to handle partial failures
+        const results = await Promise.allSettled(deletePromises);
+        const failures = results.filter(r => r.status === 'rejected');
+        
+        if (failures.length > 0) {
+          console.warn(`Failed to delete ${failures.length} images for highlight ${singleId}`);
+        }
+      }
+
+      // Delete the highlight from MongoDB
+      await Highlight.findByIdAndDelete(singleId);
+    }
 
     res.status(200).json({ 
-      message: 'Highlight and associated images deleted successfully' 
+      message: `Successfully deleted ${ids.length} ${ids.length === 1 ? 'highlight' : 'highlights'}` 
     });
   } catch (err) {
     console.error('Delete error:', err);
     res.status(500).json({ 
-      message: 'Failed to delete highlight and images' 
+      message: 'Failed to delete one or more highlights' 
     });
   }
 };
-
 const getDashboardHighlights = async (req, res) => {
   try {
     const { limit = 6 } = req.query;

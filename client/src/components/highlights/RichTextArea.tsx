@@ -1,7 +1,6 @@
 import React from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import Heading from '@tiptap/extension-heading';
 import { 
   Box, 
   ToggleButtonGroup, 
@@ -30,13 +29,11 @@ const TiptapEditor = ({
 }) => {
   const editor = useEditor({
     extensions: [
+      // Configure heading only once through StarterKit
       StarterKit.configure({
         heading: {
           levels: [1, 2, 3],
         },
-      }),
-      Heading.configure({
-        levels: [1, 2, 3],
       }),
     ],
     content: value,
@@ -104,17 +101,21 @@ const TiptapEditor = ({
           p: 1, 
           borderBottom: '1px solid', 
           borderColor: 'divider',
-          backgroundColor: 'background.paper'
+          backgroundColor: 'background.paper',
+          flexWrap: 'wrap',
+          gap: 1
         }}
       >
         {/* Text Formatting Toggle Buttons */}
         <ToggleButtonGroup 
           size="small" 
+          aria-label="text formatting"
         >
           <ToggleButton 
             value="bold"
             selected={editor.isActive('bold')}
             onClick={() => handleFormatToggle('bold')}
+            aria-label="bold"
           >
             <FormatBold />
           </ToggleButton>
@@ -122,6 +123,7 @@ const TiptapEditor = ({
             value="italic"
             selected={editor.isActive('italic')}
             onClick={() => handleFormatToggle('italic')}
+            aria-label="italic"
           >
             <FormatItalic />
           </ToggleButton>
@@ -129,6 +131,7 @@ const TiptapEditor = ({
             value="strike"
             selected={editor.isActive('strike')}
             onClick={() => handleFormatToggle('strike')}
+            aria-label="strikethrough"
           >
             <FormatStrikethrough />
           </ToggleButton>
@@ -138,10 +141,11 @@ const TiptapEditor = ({
         <FormControl 
           variant="outlined" 
           size="small" 
-          sx={{ ml: 2, minWidth: 120 }}
+          sx={{ minWidth: 120 }}
         >
-          <InputLabel>Heading</InputLabel>
+          <InputLabel id="heading-select-label">Heading</InputLabel>
           <Select
+            labelId="heading-select-label"
             label="Heading"
             value={
               editor.isActive('heading', { level: 1 }) ? '1' :
@@ -160,12 +164,13 @@ const TiptapEditor = ({
         {/* List Buttons */}
         <ToggleButtonGroup 
           size="small" 
-          sx={{ ml: 2 }}
+          aria-label="list formatting"
         >
           <ToggleButton 
             value="bulletList"
             selected={editor.isActive('bulletList')}
             onClick={() => handleFormatToggle('bulletList')}
+            aria-label="bullet list"
           >
             <FormatListBulleted />
           </ToggleButton>
@@ -173,6 +178,7 @@ const TiptapEditor = ({
             value="orderedList"
             selected={editor.isActive('orderedList')}
             onClick={() => handleFormatToggle('orderedList')}
+            aria-label="numbered list"
           >
             <FormatListNumbered />
           </ToggleButton>
@@ -183,13 +189,13 @@ const TiptapEditor = ({
           value="code"
           selected={editor.isActive('code')}
           onClick={() => handleFormatToggle('code')}
-          sx={{ ml: 2 }}
+          aria-label="code"
         >
           <Code />
         </ToggleButton>
       </Box>
 
-      {/* Editor Content - Improved to make entire area clickable */}
+      {/* Editor Content */}
       <Box 
         sx={{ 
           position: 'relative',
@@ -203,15 +209,15 @@ const TiptapEditor = ({
             width: '100%',
             '&:focus': {
               outline: 'none',
-              backgroundColor: 'rgba(0, 0, 0, 0.05)' // Subtle background change on focus
+              backgroundColor: 'rgba(0, 0, 0, 0.05)'
             },
             '&:hover': {
-              backgroundColor: 'rgba(0, 0, 0, 0.03)' // Very subtle hover effect
+              backgroundColor: 'rgba(0, 0, 0, 0.03)'
             },
-            // Basic typography styles
-            '& h1': { fontSize: '1.7rem', marginBottom: '0.5em' },
-            '& h2': { fontSize: '1.5rem', marginBottom: '0.4em' },
-            '& h3': { fontSize: '1.3rem', marginBottom: '0.3em' },
+            // Typography styles
+            '& h1': { fontSize: '1.7rem', marginBottom: '0.5em', fontWeight: 'bold' },
+            '& h2': { fontSize: '1.5rem', marginBottom: '0.4em', fontWeight: 'bold' },
+            '& h3': { fontSize: '1.3rem', marginBottom: '0.3em', fontWeight: 'bold' },
             '& p': { marginBottom: '0.8em' },
             '& ul, & ol': { paddingLeft: '1.5em', marginBottom: '1em' },
             '& li': { marginBottom: '0.2em' },

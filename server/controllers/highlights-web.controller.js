@@ -5,7 +5,6 @@ export const getAllHighlights = async (req, res) => {
   try {
     const highlights = await Highlight.find()
       .populate('category', 'category') // Populate the category field
-      .sort({ date: -1 }); // Sort by date in descending order
 
     res.status(200).json(highlights);
   } catch (error) {

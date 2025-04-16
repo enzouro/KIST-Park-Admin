@@ -16,7 +16,8 @@ import {
   Delete,
   ArrowUpward,
   ArrowDownward,
-  Info
+  Info,
+  Compress
 } from '@mui/icons-material';
 
 interface ImageUploaderProps {
@@ -30,13 +31,15 @@ interface ImageUploaderProps {
 const ImageUploader: React.FC<ImageUploaderProps> = ({ 
   value = [], 
   onChange,
-  maxImages = 10,
-  maxFileSize = 5 * 1024 * 1024, // 5MB default
+  maxImages = 5,
+  maxFileSize = 10 * 1024 * 1024, // 10MB default
   acceptedFormats = ['jpeg', 'jpg', 'png', 'gif', 'webp']
 }) => {
   const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
+  const [processingMessage, setProcessingMessage] = useState<string>('');
 
   // Convert File to base64 - memoized for performance
   const fileToBase64 = useCallback((file: File): Promise<string> => {
@@ -48,15 +51,108 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
     });
   }, []);
   
+  // Get file size from base64 string
+  const getBase64FileSize = useCallback((base64String: string): number => {
+    // Remove mime type and calculate size
+    const base64 = base64String.split(',')[1];
+    const stringLength = base64.length;
+    // Base64 represents 6 bits per character, so 4 characters = 3 bytes
+    return Math.round(stringLength * 0.75);
+  }, []);
+
+  // Function to downscale image if it exceeds size limit
+  const downscaleImageIfNeeded = useCallback(async (base64String: string, fileName: string): Promise<string> => {
+    const fileSize = getBase64FileSize(base64String);
+    
+    // If file is under size limit, no need to downscale
+    if (fileSize <= maxFileSize) {
+      return base64String;
+    }
+    
+    setIsProcessing(true);
+    setProcessingMessage(`Image too large (${formatFileSize(fileSize)}). Downscaling...`);
+    
+    return new Promise<string>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        // Original dimensions
+        let width = img.width;
+        let height = img.height;
+        let quality = 0.9;
+        let iterations = 0;
+        const maxIterations = 10;
+
+        const downscale = () => {
+          iterations++;
+          
+          // Create canvas for resizing
+          const canvas = document.createElement('canvas');
+          
+          // Determine new dimensions - reduce by 10% each iteration
+          if (iterations > 1) {
+            width = Math.floor(width * 0.9);
+            height = Math.floor(height * 0.9);
+            quality = Math.max(0.5, quality - 0.1); // Reduce quality but not below 0.5
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          // Draw image on canvas at new dimensions
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            reject(new Error('Could not get canvas context'));
+            return;
+          }
+          
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Get image format from original file
+          const imageFormat = base64String.split(';')[0].split('/')[1];
+          
+          // Convert to base64 with potentially reduced quality
+          let newBase64 = canvas.toDataURL(`image/${imageFormat}`, quality);
+          let newSize = getBase64FileSize(newBase64);
+          
+          setProcessingMessage(
+            `Downscaling: ${formatFileSize(newSize)} (${Math.round(width)}x${Math.round(height)}, quality: ${Math.round(quality * 100)}%)`
+          );
+          
+          // If size is still too large and we haven't hit max iterations, try again
+          if (newSize > maxFileSize && iterations < maxIterations) {
+            setTimeout(downscale, 0); // Use setTimeout to prevent stack overflow
+          } else {
+            setIsProcessing(false);
+            if (newSize <= maxFileSize) {
+              setProcessingMessage('');
+              resolve(newBase64);
+            } else {
+              // We couldn't get it under the limit
+              setProcessingMessage('');
+              reject(new Error(`Could not reduce image below ${formatFileSize(maxFileSize)}`));
+            }
+          }
+        };
+        
+        downscale();
+      };
+      
+      img.onerror = () => {
+        setIsProcessing(false);
+        reject(new Error('Failed to load image for downscaling'));
+      };
+      
+      img.src = base64String;
+    });
+  }, [maxFileSize, getBase64FileSize]);
+  
   // Validate file before upload
   const validateFile = useCallback((file: File): string | null => {
     if (value.length >= maxImages) {
       return `Maximum of ${maxImages} images allowed`;
     }
     
-    if (file.size > maxFileSize) {
-      return `File size exceeds maximum of ${formatFileSize(maxFileSize)}`;
-    }
+    // We'll handle size validation after potentially downscaling
     
     const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
     if (!acceptedFormats.includes(fileExtension)) {
@@ -64,7 +160,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
     }
     
     return null;
-  }, [value.length, maxImages, maxFileSize, acceptedFormats]);
+  }, [value.length, maxImages, acceptedFormats]);
   
   // Handle file selection
   const handleFileChange = useCallback(async (e: ChangeEvent<HTMLInputElement>): Promise<void> => {
@@ -74,7 +170,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
       // Reset the file input value to allow selecting the same file again
       e.target.value = '';
       
-      // Validate file
+      // Validate file format
       const validationError = validateFile(file);
       if (validationError) {
         setError(validationError);
@@ -82,11 +178,27 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
         return;
       }
       
-      setIsUploading(true);
       setError(null);
       
       try {
+        // Convert to base64
         const base64String = await fileToBase64(file);
+        
+        // Check if image needs downscaling and downscale if necessary
+        let processedImage: string; // Explicitly typed as string
+        try {
+          processedImage = await downscaleImageIfNeeded(base64String, file.name);
+        } catch (error) {
+          if (error instanceof Error) {
+            setError(error.message);
+            return;
+          }
+          setError('Failed to process image');
+          return;
+        }
+        
+        // Start the upload simulation
+        setIsUploading(true);
         
         // Simulate upload progress - in a real app, this would be tied to actual upload progress
         let progress = 0;
@@ -100,7 +212,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
             setUploadProgress(0);
             
             // Update images array
-            onChange([...value, base64String]);
+            onChange([...value, processedImage]);
           }
         }, 200);
       } catch (error) {
@@ -110,7 +222,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
         setUploadProgress(0);
       }
     }
-  }, [value, onChange, fileToBase64, validateFile]);
+  }, [value, onChange, fileToBase64, validateFile, downscaleImageIfNeeded]);
   
   // Handle image removal
   const handleRemoveImage = useCallback((index: number): void => {
@@ -159,7 +271,9 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
           Images ({value.length}/{maxImages})
         </Typography>
         
-        <Tooltip title={`Accepted formats: ${acceptedFormats.join(', ')}. Max size: ${formatFileSize(maxFileSize)}`}>
+        <Tooltip title={`Accepted formats: ${acceptedFormats.join(', ')}. 
+          Max size: ${formatFileSize(maxFileSize)}. 
+          Large images will be automatically downscaled.`}>
           <Info fontSize="small" color="action" />
         </Tooltip>
       </Box>
@@ -176,6 +290,16 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
         <Typography color="error" variant="body2" sx={{ mb: 2 }}>
           {error}
         </Typography>
+      )}
+      
+      {isProcessing && (
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="caption" display="block" sx={{ color: 'primary.main' }}>
+            <Compress fontSize="small" sx={{ verticalAlign: 'middle', mr: 0.5 }} />
+            {processingMessage}
+          </Typography>
+          <LinearProgress sx={{ mt: 1 }} />
+        </Box>
       )}
       
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, my: 2 }}>
@@ -275,7 +399,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
             width: '100%',
             borderRadius: 2
           }}
-          disabled={isUploading || value.length >= maxImages}
+          disabled={isUploading || isProcessing || value.length >= maxImages}
         >
           {value.length >= maxImages ? 
             `Maximum of ${maxImages} images reached` : 

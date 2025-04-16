@@ -136,6 +136,7 @@ const CategoryDropdown = ({ value, onChange, error }: CategoryDropdownProps) => 
       <TextField
         select
         fullWidth
+        required
         label="Category"
         // Only set value if it's valid or empty
         value={isLoading ? '' : (isValidValue ? getCategoryId(value) : '')}

@@ -1,4 +1,5 @@
 import {
+  Article,
   ManageAccounts,
   Star,
   VillaOutlined,
@@ -208,7 +209,7 @@ const App = () => {
               create: CreatePressRelease,
               edit: EditPressRelease,
               show: PressReleasePreview,
-              icon: <Star />,
+              icon: <Article />,
             },
             // Admin-only resource
             ...(isAdmin ? [{

@@ -12,7 +12,7 @@ const root = createRoot(container);
 root.render(
   <React.StrictMode>
     <ColorModeContextProvider>
-      <App />
+            <App />
     </ColorModeContextProvider>
   </React.StrictMode>,
 );
