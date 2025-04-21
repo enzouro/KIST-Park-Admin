@@ -19,6 +19,7 @@ import SDGSelect from './SDGDropdown';
 import CategoryDropdown from 'components/category/CategoryDropdown';
 import useNextSequence from 'hooks/useNextSequence';
 import { formatDateForInput } from 'utils/dateHelper'; // Import the utility function
+import { CustomThemeProvider } from 'utils/customThemeProvider';
 
 const STATUS_OPTIONS = [
   { value: 'rejected', label: 'Rejected' },
@@ -95,224 +96,226 @@ const HighlightsForm: React.FC<HighlightsFormProps> = ({
   const formEventDate = formatDateForInput(initialValues?.date);
 
   return (
-    <Paper 
-      elevation={2} 
-      sx={{ 
-        padding: '32px',
-        margin: '24px auto',
-        maxWidth: '100%',
-        borderRadius: '16px',
-        transition: 'transform 0.2s ease-in-out',
-        '&:hover': {
-          transform: 'translateY(-2px)'
-        }
-      }}
-    >
-      <Typography 
-        variant="h4" 
+    <CustomThemeProvider>
+      <Paper 
+        elevation={2} 
         sx={{ 
-          textAlign: 'left',
-          mb: 4,
-          fontWeight: 600,
+          padding: '32px',
+          margin: '24px auto',
+          maxWidth: '100%',
+          borderRadius: '16px',
+          transition: 'transform 0.2s ease-in-out',
+          '&:hover': {
+            transform: 'translateY(-2px)'
+          }
         }}
       >
-        {type} a Highlights
-      </Typography>
+        <Typography 
+          variant="h4" 
+          sx={{ 
+            textAlign: 'left',
+            mb: 4,
+            fontWeight: 600,
+          }}
+        >
+          {type} a Highlights
+        </Typography>
 
-      <form
-        style={{ 
-          width: '100%', 
-          display: 'flex', 
-          flexDirection: 'column', 
-          gap: '24px' 
-        }}
-        onSubmit={handleSubmit(onSubmit)}
-      >
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: { xs: 'column', sm: 'row' }, 
-          gap: 2,
-          '& .MuiFormControl-root': { flex: 1 }
-        }}>
-          <FormControl>
-            <TextField
-              label="Sequence Number"
-              type="number"
-              {...register('seq')}
-              value={currentSeq || ''}
-              disabled
-              InputLabelProps={{ shrink: true }}
-            />
-          </FormControl>
-
-          <FormControl>
-            <TextField
-              label="Created At"
-              type="date"
-              {...register('createdAt')}
-              defaultValue={formCreatedAt} // Use formatted date here
-              InputLabelProps={{ shrink: true }}
-            />
-          </FormControl>
-        </Box>
-
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: { xs: 'column', sm: 'row' }, 
-          gap: 2,
-          '& .MuiFormControl-root': { flex: 1 }
-        }}>
-          <TextField
-            label="Title"
-            variant="outlined"
-            {...register('title')}
-            error={!!errors?.title}
-            defaultValue={initialValues?.title || ''}
-            required
-          />
-        </Box>
-
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: { xs: 'column', sm: 'row' }, 
-          gap: 2,
-          '& .MuiFormControl-root': { flex: 1 }
-        }}>
-          <FormControl>
-            <TextField
-              label="Event Date" // Clarified label
-              type="date"
-              {...register('date')}
-              defaultValue={formEventDate || ''} // Use formatted date here
-              InputLabelProps={{ shrink: true }}
-              helperText="Date when the event happened"
-            />
-          </FormControl>
-          <TextField
-            label="Location"
-            variant="outlined"
-            {...register('location')}
-            error={!!errors?.location}
-            defaultValue={initialValues?.location || ''}
-          />
-        </Box>
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: { xs: 'column', sm: 'row' }, 
-          gap: 2,
-          '& .MuiFormControl-root': { flex: 1 }
-        }}>
-          
-          <Controller
-            name="category"
-            control={control}
-            defaultValue={initialValues?.category?._id || initialValues?.category || ''}// Simplify this
-            render={({ field }) => (
-              <CategoryDropdown
-                value={field.value}
-                onChange={(value) => {
-                  field.onChange(value);
-                }}
-                error={!!errors?.category}
-              />
-            )} 
-          />
-          <Controller
-            name="status"
-            control={control}
-            defaultValue={initialValues?.status || 'draft'}
-            render={({ field }) => (
+        <form
+          style={{ 
+            width: '100%', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '24px' 
+          }}
+          onSubmit={handleSubmit(onSubmit)}
+        >
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', sm: 'row' }, 
+            gap: 2,
+            '& .MuiFormControl-root': { flex: 1 }
+          }}>
+            <FormControl>
               <TextField
-                select
-                label="Status"
-                value={field.value}
-                onChange={field.onChange}
-                helperText="Please select the status"
-                variant="filled"
-                SelectProps={{
-                  native: true,
-                }}
-              >
-                {STATUS_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </TextField>
-            )}
-          />
-        </Box>
+                label="Sequence Number"
+                type="number"
+                {...register('seq')}
+                value={currentSeq || ''}
+                disabled
+                InputLabelProps={{ shrink: true }}
+              />
+            </FormControl>
 
-        {/* SDG Selection component */}
-        <Controller
-          name="sdg"
-          control={control}
-          defaultValue={initialValues?.sdg || []}
-          render={({ field }) => (
-            <SDGSelect
-              value={field.value || []}
-              onChange={field.onChange}
-              error={!!errors?.sdg}
+            <FormControl>
+              <TextField
+                label="Created At"
+                type="date"
+                {...register('createdAt')}
+                defaultValue={formCreatedAt} // Use formatted date here
+                InputLabelProps={{ shrink: true }}
+              />
+            </FormControl>
+          </Box>
+
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', sm: 'row' }, 
+            gap: 2,
+            '& .MuiFormControl-root': { flex: 1 }
+          }}>
+            <TextField
+              label="Title"
+              variant="outlined"
+              {...register('title')}
+              error={!!errors?.title}
+              defaultValue={initialValues?.title || ''}
+              required
             />
-          )}
-        />
+          </Box>
 
-        {/* Rich Text Area Added Here */}
-        <Box>
-          <Typography variant="subtitle1" sx={{ mb: 2 }}>
-            Content
-          </Typography>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', sm: 'row' }, 
+            gap: 2,
+            '& .MuiFormControl-root': { flex: 1 }
+          }}>
+            <FormControl>
+              <TextField
+                label="Event Date" // Clarified label
+                type="date"
+                {...register('date')}
+                defaultValue={formEventDate || ''} // Use formatted date here
+                InputLabelProps={{ shrink: true }}
+                helperText="Date when the event happened"
+              />
+            </FormControl>
+            <TextField
+              label="Location"
+              variant="outlined"
+              {...register('location')}
+              error={!!errors?.location}
+              defaultValue={initialValues?.location || ''}
+            />
+          </Box>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', sm: 'row' }, 
+            gap: 2,
+            '& .MuiFormControl-root': { flex: 1 }
+          }}>
+            
+            <Controller
+              name="category"
+              control={control}
+              defaultValue={initialValues?.category?._id || initialValues?.category || ''}// Simplify this
+              render={({ field }) => (
+                <CategoryDropdown
+                  value={field.value}
+                  onChange={(value) => {
+                    field.onChange(value);
+                  }}
+                  error={!!errors?.category}
+                />
+              )} 
+            />
+            <Controller
+              name="status"
+              control={control}
+              defaultValue={initialValues?.status || 'draft'}
+              render={({ field }) => (
+                <TextField
+                  select
+                  label="Status"
+                  value={field.value}
+                  onChange={field.onChange}
+                  helperText="Please select the status"
+                  variant="filled"
+                  SelectProps={{
+                    native: true,
+                  }}
+                >
+                  {STATUS_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </TextField>
+              )}
+            />
+          </Box>
+
+          {/* SDG Selection component */}
           <Controller
-            name="content"
+            name="sdg"
             control={control}
-            defaultValue={initialValues?.content || ''}
+            defaultValue={initialValues?.sdg || []}
             render={({ field }) => (
-              <RichTextArea 
-                value={field.value} 
-                onChange={field.onChange} 
+              <SDGSelect
+                value={field.value || []}
+                onChange={field.onChange}
+                error={!!errors?.sdg}
               />
             )}
           />
-        </Box>
 
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: { xs: 'column', sm: 'row' }, 
-          gap: 2,
-          alignItems: 'center',
-          '& .MuiFormControl-root': { flex: 1 }
-        }}>
-          <Controller
-            name="images"
-            control={control}
-            defaultValue={initialValues?.images || []}
-            render={({ field }) => (
-              <ImageUploader
-                value={field.value}
-                onChange={(newImages) => field.onChange(newImages)}
-              />
-            )}
-          />
-        </Box>
+          {/* Rich Text Area Added Here */}
+          <Box>
+            <Typography variant="subtitle1" sx={{ mb: 2 }}>
+              Content
+            </Typography>
+            <Controller
+              name="content"
+              control={control}
+              defaultValue={initialValues?.content || ''}
+              render={({ field }) => (
+                <RichTextArea 
+                  value={field.value} 
+                  onChange={field.onChange} 
+                />
+              )}
+            />
+          </Box>
 
-        <Box display="flex" justifyContent="center" gap={2} mt={3}>
-          <CustomButton
-            type="submit"
-            title={isCreating ? "Create" : "Update"}
-            backgroundColor="primary.light"
-            color="primary.dark"
-            icon={<Publish />}
-          />
-          <CustomButton
-            title="Cancel"
-            backgroundColor="error.light"
-            color="error.dark"
-            icon={<Close />}
-            handleClick={() => navigate('/highlights')}
-          />
-        </Box>
-      </form>
-    </Paper>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', sm: 'row' }, 
+            gap: 2,
+            alignItems: 'center',
+            '& .MuiFormControl-root': { flex: 1 }
+          }}>
+            <Controller
+              name="images"
+              control={control}
+              defaultValue={initialValues?.images || []}
+              render={({ field }) => (
+                <ImageUploader
+                  value={field.value}
+                  onChange={(newImages) => field.onChange(newImages)}
+                />
+              )}
+            />
+          </Box>
+
+          <Box display="flex" justifyContent="center" gap={2} mt={3}>
+            <CustomButton
+              type="submit"
+              title={isCreating ? "Create" : "Update"}
+              backgroundColor="primary.light"
+              color="primary.dark"
+              icon={<Publish />}
+            />
+            <CustomButton
+              title="Cancel"
+              backgroundColor="error.light"
+              color="error.dark"
+              icon={<Close />}
+              handleClick={() => navigate('/highlights')}
+            />
+          </Box>
+        </form>
+      </Paper>
+    </CustomThemeProvider>
   );
 };
 

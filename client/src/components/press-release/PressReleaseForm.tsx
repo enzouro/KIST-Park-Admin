@@ -17,6 +17,7 @@ import { PressReleaseFormProps, PressReleaseFormValues } from 'interfaces/forms'
 import CustomButton from 'components/common/CustomButton';
 import useNextSequence from 'hooks/useNextSequence';
 import ImageUploader from './ImageUploader';
+import { CustomThemeProvider } from 'utils/customThemeProvider';
 
 const getTodayDate = () => {
   const today = new Date();
@@ -71,6 +72,7 @@ const PressReleaseForm: React.FC<PressReleaseFormProps> = ({
   }
 
   return (
+    <CustomThemeProvider>
     <Paper
       elevation={2}
       sx={{
@@ -231,6 +233,7 @@ const PressReleaseForm: React.FC<PressReleaseFormProps> = ({
         </Box>
       </form>
     </Paper>
+    </CustomThemeProvider>
   );
 };
 

@@ -10,6 +10,7 @@ import DeleteConfirmationDialog from 'components/common/DeleteConfirmationDialog
 import useDeleteWithConfirmation from 'hooks/useDeleteWithConfirmation';
 import ErrorDialog from 'components/common/ErrorDialog';
 import LoadingDialog from 'components/common/LoadingDialog';
+import { CustomThemeProvider } from 'utils/customThemeProvider';
 
 const AllPressReleases = () => {
   const navigate = useNavigate();
@@ -120,132 +121,134 @@ const AllPressReleases = () => {
   }
 
   return (
-    <Paper 
-      elevation={3} 
-      sx={{ 
-        height: {
-          xs: '700px',
-          sm: '700px',
-          md: containerHeight,
-          lg: containerHeight,
-        },
-        display: 'flex',
-        flexDirection: 'column',
-        m: 2,
-        overflow: 'hidden'
-      }}
-    >
-      <Typography 
-        variant="h4" 
+    <CustomThemeProvider>
+      <Paper 
+        elevation={3} 
         sx={{ 
-          p: 2,
-          fontWeight: 600,
+          height: {
+            xs: '700px',
+            sm: '700px',
+            md: containerHeight,
+            lg: containerHeight,
+          },
+          display: 'flex',
+          flexDirection: 'column',
+          m: 2,
+          overflow: 'hidden'
         }}
       >
-        {!allPressReleases.length ? 'No Press Releases' : 'All Press Releases'}
-      </Typography>
-      
-      <Box sx={{ 
-        display: 'flex', 
-        flexDirection: 'column',
-        gap: 2,
-        padding: 2,
-      }}>
-        {/* Search and Date Filter Grid */}
-        <Box 
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', md: '2fr 3fr auto' },
-            gap: 2,
+        <Typography 
+          variant="h4" 
+          sx={{ 
+            p: 2,
+            fontWeight: 600,
           }}
         >
-          {/* Search Box */}
-          <Box>
-            <TextField
-              fullWidth
-              size="small"
-              label="Search"
-              placeholder="Search by title, publisher, or sequence"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </Box>
-
-          {/* Date Range */}
+          {!allPressReleases.length ? 'No Press Releases' : 'All Press Releases'}
+        </Typography>
+        
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          gap: 2,
+          padding: 2,
+        }}>
+          {/* Search and Date Filter Grid */}
           <Box 
-            sx={{ 
-              display: 'flex',
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', md: '2fr 3fr auto' },
               gap: 2,
             }}
           >
-            <TextField
-              fullWidth
-              size="small"
-              label="Start Date"
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              fullWidth
-              size="small"
-              label="End Date"
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
+            {/* Search Box */}
+            <Box>
+              <TextField
+                fullWidth
+                size="small"
+                label="Search"
+                placeholder="Search by title, publisher, or sequence"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </Box>
+
+            {/* Date Range */}
+            <Box 
+              sx={{ 
+                display: 'flex',
+                gap: 2,
+              }}
+            >
+              <TextField
+                fullWidth
+                size="small"
+                label="Start Date"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
+              <TextField
+                fullWidth
+                size="small"
+                label="End Date"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Box>
+
+            {/* Add Button */}
+            <CustomButton
+              title="Add"
+              backgroundColor="#005099"
+              color="#ffffff"
+              icon={<Add />}
+              handleClick={() => navigate(`/press-release/create`)}
             />
           </Box>
+        </Box>
 
-          {/* Add Button */}
-          <CustomButton
-            title="Add"
-            backgroundColor="primary.light"
-            color="primary.dark"
-            icon={<Add />}
-            handleClick={() => navigate(`/press-release/create`)}
+        <Box sx={{ 
+          flex: 1,
+          width: '100%',
+          overflow: 'hidden'
+        }}>
+          <CustomTable
+            rows={rows}
+            columns={columns}
+            containerHeight="100%"
+            onView={handleView}
+            onEdit={handleEdit}
+            onDelete={(ids) => handleTableDelete(ids, rows)}
+            initialSortModel={[{ field: 'date', sort: 'desc' }]}
           />
         </Box>
-      </Box>
 
-      <Box sx={{ 
-        flex: 1,
-        width: '100%',
-        overflow: 'hidden'
-      }}>
-        <CustomTable
-          rows={rows}
-          columns={columns}
-          containerHeight="100%"
-          onView={handleView}
-          onEdit={handleEdit}
-          onDelete={(ids) => handleTableDelete(ids, rows)}
-          initialSortModel={[{ field: 'date', sort: 'desc' }]}
+        {/* Delete Confirmation Dialog */}
+        <DeleteConfirmationDialog
+          open={deleteConfirmation.open}
+          contentText={deleteConfirmation.seq}
+          onConfirm={confirmDelete}
+          onCancel={cancelDelete}
         />
-      </Box>
+        
+        {/* Loading Dialog */}
+        <LoadingDialog 
+          open={isDeleteLoading} 
+          loadingMessage="Please wait..." 
+        />
 
-      {/* Delete Confirmation Dialog */}
-      <DeleteConfirmationDialog
-        open={deleteConfirmation.open}
-        contentText={deleteConfirmation.seq}
-        onConfirm={confirmDelete}
-        onCancel={cancelDelete}
-      />
-      
-      {/* Loading Dialog */}
-      <LoadingDialog 
-        open={isDeleteLoading} 
-        loadingMessage="Please wait..." 
-      />
-
-      {/* Error Dialog */}
-      <ErrorDialog
-        open={deleteError.open}
-        errorMessage={deleteError.message}
-        onClose={closeDeleteErrorDialog}
-      />
-    </Paper>
+        {/* Error Dialog */}
+        <ErrorDialog
+          open={deleteError.open}
+          errorMessage={deleteError.message}
+          onClose={closeDeleteErrorDialog}
+        />
+      </Paper>
+    </CustomThemeProvider>
   );
 };
 

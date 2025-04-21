@@ -29,6 +29,7 @@ import {
     return (
       <Card 
         sx={{ 
+          maxWidth: 450,
           height: '100%',
           display: 'flex',
           flexDirection: 'column',
@@ -67,7 +68,7 @@ import {
           )}
         </Box>
   
-        <CardContent sx={{ flexGrow: 1 }}> 
+        <CardContent > 
           <Typography gutterBottom variant="h6" noWrap>
             {pressRelease.title}
           </Typography>
@@ -86,7 +87,7 @@ import {
               {formatDate(pressRelease.date)}
             </Typography>
           </Box>
-          <Box sx={{ display: 'flex', gap: 1 }}>
+          <Box >
             <Typography 
               variant="caption" 
               color="primary"

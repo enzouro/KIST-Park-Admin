@@ -104,7 +104,7 @@ const Home = () => {
     setSelectedCategory(event.target.value);
   };
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
@@ -165,15 +165,16 @@ const Home = () => {
               ))}
             </TextField>
           </Box>
-        <Grid container spacing={3}>
-          {processedHighlights?.map((highlight: any) => (
-            <Grid item key={highlight._id} xs={12} sm={6} md={4}>
-              <HighlightsCard 
-              highlight={highlight}
-              onView={() => handleView(highlight._id)} />
-            </Grid>
-          ))}
-        </Grid>
+          
+          <Grid container spacing={3}>
+            {processedHighlights?.map((highlight: any) => (
+              <Grid item key={highlight._id} xs={12} sm={6} md={4}>
+                <HighlightsCard 
+                highlight={highlight}
+                onView={() => handleView(highlight._id)} />
+              </Grid>
+            ))}
+          </Grid>
       </TabPanel>
 
       <TabPanel value={tabValue} index={1}>

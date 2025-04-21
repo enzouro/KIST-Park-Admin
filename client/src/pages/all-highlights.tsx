@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useContext, useMemo, useState } from 'react';
 import { useTable } from '@pankod/refine-core';
-import { GridColDef, Box, Paper, Typography, Stack, TextField, ButtonGroup, Button } from '@pankod/refine-mui';
+import { GridColDef, Box, Paper, Typography, TextField, ButtonGroup, Button } from '@pankod/refine-mui';
 import { Add, Close, Settings } from '@mui/icons-material';
 import { useNavigate } from '@pankod/refine-react-router-v6';
 import CustomButton from 'components/common/CustomButton';
@@ -12,6 +12,8 @@ import ErrorDialog from 'components/common/ErrorDialog';
 import LoadingDialog from 'components/common/LoadingDialog';
 import { Dialog, DialogContent, DialogTitle, IconButton, MenuItem } from '@mui/material';
 import CategoryManage from 'components/category/CategoryManage';
+import { CustomThemeProvider } from 'utils/customThemeProvider';
+
 
 const AllHighlights = () => {
   const navigate = useNavigate();
@@ -22,6 +24,8 @@ const AllHighlights = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [categoryManageOpen, setCategoryManageOpen] = useState(false);
+
+
 
 
   const {
@@ -150,6 +154,7 @@ const AllHighlights = () => {
   }
 
   return (
+    <CustomThemeProvider>
     <Paper 
       elevation={3} 
       sx={{ 
@@ -183,6 +188,7 @@ const AllHighlights = () => {
   padding: 1.5,  // Reduced from 2
 }}>
   {/* Search and Date Filter Grid */}
+
   <Box 
     sx={{
       display: 'grid',
@@ -199,6 +205,7 @@ const AllHighlights = () => {
         placeholder="Search by title, location, or sequence"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
+
       />
     </Box>
 
@@ -234,8 +241,8 @@ const AllHighlights = () => {
     <Box sx={{ p: 1 }}>  {/* Added padding container for alignment */}
       <CustomButton
         title="Add"
-        backgroundColor="primary.light"
-        color="primary.dark"
+        backgroundColor="#005099"
+        color="white"
         icon={<Add />}
         handleClick={() => navigate(`/highlights/create`)}
       />
@@ -252,12 +259,12 @@ const AllHighlights = () => {
   >
     {/* Status Filter */}
     <Box sx={{ p: 1 }}>  {/* Reduced padding from 2 to 1 */}
-      <ButtonGroup fullWidth size="small">  {/* Added size="small" for a more compact look */}
+          <ButtonGroup fullWidth size="small" color="primary" >
         <Button
           variant={statusFilter === 'all' ? 'contained' : 'outlined'}
           onClick={() => setStatusFilter('all')}
           sx={{
-            backgroundColor: statusFilter === 'all' ? 'primary.light' : 'inherit',
+            backgroundColor: statusFilter === 'all' ? '#005099' : 'inherit',
             color: statusFilter === 'all' ? 'primary.contrastText' : 'inherit',
           }}
         >
@@ -293,7 +300,7 @@ const AllHighlights = () => {
         >
           Rejected
         </Button>
-      </ButtonGroup>
+          </ButtonGroup>
     </Box>
 
     {/* Category Filter */}
@@ -327,6 +334,7 @@ const AllHighlights = () => {
       </IconButton>
     </Box>
   </Box>
+
 </Box>
 
         
@@ -390,6 +398,7 @@ const AllHighlights = () => {
           </DialogContent>
         </Dialog>
     </Paper>
+    </CustomThemeProvider>
   );
 };
 
