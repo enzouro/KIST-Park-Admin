@@ -41,17 +41,19 @@ import { UnauthorizedPage } from 'pages/unauthorized';
 import CreatePressRelease from 'pages/create-pressrelease';
 
 
+
 const axiosInstance = axios.create();
 axiosInstance.interceptors.request.use((request: AxiosRequestConfig) => {
   const token = localStorage.getItem('token');
-  if (request.headers) {
-    request.headers.Authorization = `Bearer ${token}`;
-  } else {
-    request.headers = {
-      Authorization: `Bearer ${token}`,
-    };
+  if (token) {
+    if (request.headers) {
+      request.headers['Authorization'] = `Bearer ${token}`;
+    } else {
+      request.headers = {
+        'Authorization': `Bearer ${token}`
+      };
+    }
   }
-
   return request;
 });
 
@@ -190,7 +192,7 @@ const App = () => {
       <GlobalStyles styles={{ html: { WebkitFontSmoothing: 'auto' } }} />
       <RefineSnackbarProvider>
         <Refine
-          dataProvider={dataProvider('http://localhost:8080/api/v1')}
+          dataProvider={dataProvider('http://localhost:8080/api/v1', axiosInstance)}
           notificationProvider={notificationProvider}
           ReadyPage={ReadyPage}
           catchAll={<ErrorComponent />}

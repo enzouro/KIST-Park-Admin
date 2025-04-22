@@ -2,7 +2,6 @@ import express from 'express';
 
 import {
   createUser,
-  getAllUsers,
   getUserInfoByID
 } from '../controllers/user.controller.js';
 
@@ -10,7 +9,6 @@ const router = express.Router();
 
 // Combined the GET and POST methods for '/'
 router.route('/')
-  .get(getAllUsers)  // Handles fetching all users or users by query (email, etc.)
   .post(createUser); // Handles creating a new user
 
 // Route for getting a user by ID

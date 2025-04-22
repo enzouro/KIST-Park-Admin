@@ -9,11 +9,27 @@ import highlightsRoutes from './routes/highlights.routes.js';
 import categoryRouter from './routes/category.routes.js';
 import pressReleaseRouter from './routes/press-release.routes.js';
 import highlightsWebRoutes from './routes/highlights-web.routes.js';
+import pressReleaseWebRoutes from './routes/pressRelease-web.routes.js';
+
+import auth from './middleware/auth.middleware.js';
 
 dotenv.config();
 
 const app = express();
-app.use(cors());
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    const allowedOrigins = ['http://localhost:3000'];
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+};
+
+app.use(cors(corsOptions));
+
 app.use(express.json({ limit: '50mb' }));
 
 app.get('/', (req, res) => {
@@ -22,15 +38,25 @@ app.get('/', (req, res) => {
   });
 });
 
+// Add this before your other routes
+app.get('/api/v1/test-auth', auth, (req, res) => {
+  res.json({ 
+      message: 'Authentication working', 
+      user: req.user 
+  });
+});
+
+
 app.use('/api/v1/users', userRouter);
 
-app.use('/api/v1/user-management', userManagementRoutes);
-app.use('/api/v1/highlights', highlightsRoutes);
-app.use('/api/v1/categories', categoryRouter);
-
-app.use('/api/v1/press-release', pressReleaseRouter);
+app.use('/api/v1/user-management', auth, userManagementRoutes);
+app.use('/api/v1/highlights', auth, highlightsRoutes);
+app.use('/api/v1/categories', auth, categoryRouter);
+app.use('/api/v1/press-release', auth, pressReleaseRouter);
 
 app.use('/api/v1/highlights-web', highlightsWebRoutes);
+app.use('/api/v1/press-release-web', pressReleaseWebRoutes);
+
 
 
 const startServer = async () => {

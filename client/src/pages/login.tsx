@@ -22,20 +22,30 @@ const GoogleButton: React.FC<{ onLogin: (res: CredentialResponse) => void }> = (
         callback: async (res: CredentialResponse) => {
           if (res.credential) {
             const profileObj = JSON.parse(atob(res.credential.split('.')[1]));
-            const response = await axios.post(`http://localhost:8080/api/v1/users`, {
-              name: profileObj.name,
-              email: profileObj.email,
-              avatar: profileObj.picture,
-            });
-
-            if (response.data.isAllowed) {
-              onLogin(res);
-            } else {
-              // Redirect to Unauthorized page
+            
+            try {
+              const response = await axios.post('http://localhost:8080/api/v1/users', {
+                name: profileObj.name,
+                email: profileObj.email,
+                avatar: profileObj.picture,
+              }, {
+                headers: {
+                  'Authorization': `Bearer ${res.credential}`
+                }
+              });
+        
+              if (response.data.isAllowed) {
+                localStorage.setItem('token', res.credential);
+                onLogin(res);
+              } else {
+                window.location.href = '/unauthorized';
+              }
+            } catch (error) {
+              console.error('Login error:', error);
               window.location.href = '/unauthorized';
             }
           }
-        },
+        }
       });
       window.google.accounts.id.renderButton(divRef.current, {
         theme: 'filled_blue',
