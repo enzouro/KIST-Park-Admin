@@ -56,59 +56,114 @@ axiosInstance.interceptors.request.use((request: AxiosRequestConfig) => {
   }
   return request;
 });
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    
+    // If error is 401 (Unauthorized) and we haven't tried refreshing yet
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      try {
+        // Clear the expired token
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        
+        // Redirect to login
+        window.location.href = '/login';
+        return Promise.reject(error);
+      } catch (err) {
+        return Promise.reject(err);
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 const App = () => {
   const [isAdmin, setIsAdmin] = React.useState(false);
 
-  // Add a function to check user authorization
-  const checkUserAuthorization = async () => {
-    try {
-      const user = localStorage.getItem('user');
-      if (!user) return;
-      
-      const parsedUser = JSON.parse(user);
-      const response = await fetch(`http://localhost:8080/api/v1/users/${parsedUser.userid}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      if (!response.ok) {
-        // If user is not found or unauthorized, trigger logout
-        authProvider.logout({} as any);  // Provide empty object as parameter
-        window.location.href = '/unauthorized';
-      }
 
-      const userData = await response.json();
-      if (!userData.isAllowed) {
-        // If user is explicitly not allowed, trigger logout
-        authProvider.logout({} as any);  // Provide empty object as parameter
-        window.location.href = '/unauthorized';
+
+  // Consolidated authorization and token check function
+const checkAuthAndTokenValidity = async () => {
+  try {
+    // 1. First check if token exists
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    
+    // 2. Check if token is expired
+    try {
+      const decodedToken = parseJwt(token);
+      const currentTime = Date.now() / 1000;
+      
+      // If token is expired, log out automatically
+      if (decodedToken.exp < currentTime) {
+        console.log("Token expired, logging out user");
+        authProvider.logout({} as any);
+        window.location.href = '/login';
+        return; // Exit early if token is expired
       }
     } catch (error) {
-      console.error('Error checking user authorization:', error);
+      console.error('Error checking token expiration:', error);
+      authProvider.logout({} as any);
+      window.location.href = '/login';
+      return; // Exit early if token parsing fails
     }
-  };
+    
+    // 3. Now check user authorization with the server
+    const user = localStorage.getItem('user');
+    if (!user) return;
+    
+    const parsedUser = JSON.parse(user);
+    const response = await fetch(`http://localhost:8080/api/v1/users/${parsedUser.userid}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (!response.ok) {
+      // If user is not found or unauthorized, trigger logout
+      authProvider.logout({} as any);
+      window.location.href = '/unauthorized';
+      return;
+    }
 
+    const userData = await response.json();
+    if (!userData.isAllowed) {
+      // If user is explicitly not allowed, trigger logout
+      authProvider.logout({} as any);
+      window.location.href = '/unauthorized';
+      return;
+    }
+    
+    // User is authenticated and authorized - no action needed
+  } catch (error) {
+    console.error('Error checking authentication and authorization:', error);
+  }
+};
+
+  // Add this to your App.tsx
   React.useEffect(() => {
     const user = localStorage.getItem('user');
     if (user) {
-      const parsedUser = JSON.parse(user); // Safe to parse as user is not null
+      const parsedUser = JSON.parse(user);
       if (parsedUser.isAdmin) {
         setIsAdmin(parsedUser.isAdmin);
       }
     }
     
-    // Set up periodic authorization check
-    const authCheckInterval = setInterval(checkUserAuthorization, 30000); // Check every 30 seconds
+    // Set up a single consolidated check
+    const authCheckInterval = setInterval(checkAuthAndTokenValidity, 60000); // Check every minute
     
     // Initial check
-    checkUserAuthorization();
+    checkAuthAndTokenValidity();
     
-
     // Cleanup interval on component unmount
     return () => clearInterval(authCheckInterval);
   }, []);
+
 
   const authProvider: AuthProvider = {
     login: async ({ credential }: CredentialResponse) => {
@@ -164,14 +219,41 @@ const App = () => {
 
       return Promise.resolve();
     },
-    checkError: () => Promise.resolve(),
+    checkError: (error) => {
+      const status = error?.response?.status;
+      if (status === 401 || status === 403) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        return Promise.reject();
+      }
+      return Promise.resolve();
+    },
     checkAuth: async () => {
       const token = localStorage.getItem('token');
-
-      if (token) {
-        return Promise.resolve();
+    
+      if (!token) {
+        return Promise.reject();
       }
-      return Promise.reject();
+    
+      // Check if token is expired
+      try {
+        const decodedToken = parseJwt(token);
+        const currentTime = Date.now() / 1000;
+        
+        if (decodedToken.exp < currentTime) {
+          // Token expired, clear storage and reject
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          return Promise.reject(new Error('Token expired'));
+        }
+        
+        return Promise.resolve();
+      } catch (error) {
+        // Token parse error
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        return Promise.reject(error);
+      }
     },
 
     getPermissions: () => Promise.resolve(),

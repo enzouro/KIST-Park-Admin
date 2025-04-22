@@ -4,11 +4,33 @@ import { Container, Box } from '@pankod/refine-mui';
 import axios from 'axios'; // Import axios for API requests
 import { CredentialResponse } from 'interfaces/google';
 import {kist} from '../assets';
+import { parseJwt } from 'utils/parse-jwt';
 
 const GoogleButton: React.FC<{ onLogin: (res: CredentialResponse) => void }> = ({ onLogin }) => {
   const divRef = useRef<HTMLDivElement>(null);
 
-  // In the useEffect:
+
+  useEffect(() => {
+    // Check token validity at login page load
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const decodedToken = parseJwt(token);
+        const currentTime = Date.now() / 1000;
+        
+        if (decodedToken.exp < currentTime) {
+          // Token is expired, clear it
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        }
+      } catch (error) {
+        // Invalid token, clear it
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
+    }
+  }, []);
+  
   useEffect(() => {
     if (typeof window === 'undefined' || !window.google || !divRef.current) {
       return;
