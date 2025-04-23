@@ -1,5 +1,6 @@
 import {
   Article,
+  Email,
   ManageAccounts,
   Star,
   VillaOutlined,
@@ -40,6 +41,7 @@ import UserManagement from 'pages/user-management';
 import { UnauthorizedPage } from 'pages/unauthorized';
 import CreatePressRelease from 'pages/create-pressrelease';
 import { SessionExpired } from 'pages/session-expired';
+import Subscribers from 'pages/subscribers';
 
 
 
@@ -292,6 +294,11 @@ const checkAuthAndTokenValidity = async () => {
               edit: EditPressRelease,
               show: PressReleasePreview,
               icon: <Article />,
+            },
+            {
+              name:'subscribers',
+              list: Subscribers,
+              icon: <Email />,
             },
             // Admin-only resource
             ...(isAdmin ? [{

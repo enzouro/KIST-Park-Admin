@@ -10,6 +10,7 @@ import categoryRouter from './routes/category.routes.js';
 import pressReleaseRouter from './routes/press-release.routes.js';
 import highlightsWebRoutes from './routes/highlights-web.routes.js';
 import pressReleaseWebRoutes from './routes/pressRelease-web.routes.js';
+import subscribersRouter from './routes/subscribers.routes.js';
 
 import auth from './middleware/auth.middleware.js';
 
@@ -19,7 +20,7 @@ const app = express();
 
 const corsOptions = {
   origin: function (origin, callback) {
-    const allowedOrigins = ['http://localhost:3000'];
+    const allowedOrigins = ['http://localhost:3000','http://localhost:4000'];
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
@@ -57,7 +58,7 @@ app.use('/api/v1/press-release', auth, pressReleaseRouter);
 app.use('/api/v1/highlights-web', highlightsWebRoutes);
 app.use('/api/v1/press-release-web', pressReleaseWebRoutes);
 
-
+app.use('/api/v1/subscribers', subscribersRouter);
 
 const startServer = async () => {
   try {
