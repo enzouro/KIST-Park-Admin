@@ -39,6 +39,7 @@ import React from 'react';
 import UserManagement from 'pages/user-management';
 import { UnauthorizedPage } from 'pages/unauthorized';
 import CreatePressRelease from 'pages/create-pressrelease';
+import { SessionExpired } from 'pages/session-expired';
 
 
 
@@ -84,8 +85,6 @@ axiosInstance.interceptors.response.use(
 const App = () => {
   const [isAdmin, setIsAdmin] = React.useState(false);
 
-
-
   // Consolidated authorization and token check function
 const checkAuthAndTokenValidity = async () => {
   try {
@@ -102,7 +101,7 @@ const checkAuthAndTokenValidity = async () => {
       if (decodedToken.exp < currentTime) {
         console.log("Token expired, logging out user");
         authProvider.logout({} as any);
-        window.location.href = '/login';
+        window.location.href = '/session-expired'; // Redirect to session expired page
         return; // Exit early if token is expired
       }
     } catch (error) {
@@ -144,7 +143,6 @@ const checkAuthAndTokenValidity = async () => {
   }
 };
 
-  // Add this to your App.tsx
   React.useEffect(() => {
     const user = localStorage.getItem('user');
     if (user) {
@@ -313,6 +311,10 @@ const checkAuthAndTokenValidity = async () => {
                 path: '/unauthorized',
                 element: <UnauthorizedPage />
               },
+              {
+                path: '/session-expired',
+                element: <SessionExpired />
+              }
             ]
 
           }}

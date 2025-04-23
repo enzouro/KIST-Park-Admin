@@ -4,7 +4,8 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CustomThemeProvider } from 'utils/customThemeProvider';
 
-export const UnauthorizedPage: React.FC = () => {
+
+export const SessionExpired: React.FC = () => {
   const navigate = useNavigate();
 
   return (
@@ -17,10 +18,11 @@ export const UnauthorizedPage: React.FC = () => {
       height="100vh"
     >
       <Typography variant="h4" gutterBottom>
-        Authorized Personnel Only
+        Session Expired
       </Typography>
-      <Typography variant="body1" gutterBottom>
-        If you're a user, please contact the admin for access.
+      <Typography variant="body1" gutterBottom sx={{ textAlign: 'center' }}>
+      Your session has expired due to inactivity. To protect your account security, you've been automatically logged out. <br/>
+      Please log in again to continue using the application.
       </Typography>
       <Button
         variant="contained"
@@ -31,6 +33,6 @@ export const UnauthorizedPage: React.FC = () => {
         Back to Login
       </Button>
     </Box>
-  </CustomThemeProvider>
+    </CustomThemeProvider>
   );
 };
