@@ -37,7 +37,6 @@ const CreatePressRelease = () => {
   });
 
   const onFinishHandler = async (data: PressReleaseFormValues) => {
-    try {
       if (!data.image) {
         throw new Error('Image is required');
       }
@@ -46,10 +45,7 @@ const CreatePressRelease = () => {
         createdAt: new Date().toISOString(),
       });
       navigate('/press-release');
-    } catch (error) {
-      console.error('Error creating press release:', error);
     }
-  };
 
   if (formLoading) {
     return (

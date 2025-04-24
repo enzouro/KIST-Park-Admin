@@ -51,7 +51,6 @@ export const getUserInfoByID = async (req, res) => {
       return res.status(400).json({ message: 'Invalid user ID format' });
     }
     
-    console.error('Error in getUserInfoByID:', err);
     res.status(500).json({ 
       message: 'Failed to get user properties, please try again later',
       error: process.env.NODE_ENV === 'development' ? err.message : undefined

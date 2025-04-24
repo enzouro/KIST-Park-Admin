@@ -39,14 +39,13 @@ const processImages = async (images) => {
           // Check image size before processing
           const base64Size = image.length * (3/4);
           if (base64Size > 10 * 1024 * 1024) { // 10MB limit
-            console.warn('Image too large, skipping');
             return null;
           }
 
           const uploadResult = await cloudinary.uploader.upload(image, uploadOptions);
           return uploadResult.url;
         } catch (error) {
-          console.error('Lightweight upload error:', error);
+
           return null;
         }
       }
@@ -80,7 +79,7 @@ const deleteImageFromCloudinary = async (imageUrl) => {
     deleteImageFromCloudinary.deletedCache.add(publicId);
     return true;
   } catch (error) {
-    console.error('Lightweight delete error:', error);
+
     return false;
   }
 };
@@ -120,7 +119,7 @@ const getPressReleases = async (req, res) => {
 
     res.status(200).json(pressReleases);
   } catch (err) {
-    console.error('Fetch error:', err);
+
     res.status(500).json({ message: 'Fetching press releases failed, please try again later' });
   }
 };
@@ -148,7 +147,7 @@ const getPressReleaseById = async (req, res) => {
       res.status(404).json({ message: 'Press release not found' });
     }
   } catch (err) {
-    console.error("Error fetching press release:", err);
+
     res.status(500).json({ message: 'Failed to get press release details' });
   }
 };
@@ -209,7 +208,7 @@ const createPressRelease = async (req, res) => {
       pressRelease
     });
   } catch (err) {
-    console.error('Create error:', err);
+
     res.status(500).json({ 
       message: 'Failed to create press release', 
       error: err.message 
@@ -252,7 +251,7 @@ const updatePressRelease = async (req, res) => {
       pressRelease: updatedPressRelease
     });
   } catch (err) {
-    console.error('Update error:', err);
+
     res.status(500).json({ 
       message: 'Failed to update press release',
       error: err.message 
@@ -298,7 +297,7 @@ const deletePressRelease = async (req, res) => {
       });
     }
   } catch (err) {
-    console.error('Delete error:', err);
+
     res.status(500).json({ 
       message: 'Failed to delete press release' 
     });

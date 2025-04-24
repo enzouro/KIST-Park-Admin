@@ -20,7 +20,7 @@ const app = express();
 
 const corsOptions = {
   origin: function (origin, callback) {
-    const allowedOrigins = ['http://localhost:3000','http://localhost:4000', 'https://kist-park-admin.netlify.app'];
+    const allowedOrigins = ['http://localhost:3000','http://localhost:4000', 'https://kist-park-admin.netlify.app','http://127.0.0.1:4000','https://firstkistpark.com'];
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
@@ -63,7 +63,7 @@ app.use('/api/v1/subscribers', subscribersRouter);
 const startServer = async () => {
   try {
     connectDB(process.env.MONGODB_URL);
-    app.listen(8080, () => console.log('Server started on port 8080'));
+    app.listen(8080);
   } catch (error) {
     console.log(error);
   }

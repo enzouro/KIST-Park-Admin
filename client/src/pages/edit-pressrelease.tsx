@@ -50,7 +50,6 @@ const EditPressRelease = () => {
   }, [pressReleaseData, reset]);
 
   const onFinishHandler = async (data: PressReleaseFormValues) => {
-    try {
       if (!data.image) {
         throw new Error('Image is required');
       }
@@ -59,9 +58,6 @@ const EditPressRelease = () => {
         createdAt: pressReleaseData?.data.createdAt || new Date().toISOString(),
       });
       navigate('/press-release');
-    } catch (error) {
-      console.error('Error updating press release:', error);
-    }
   };
 
   if (fetchLoading || formLoading) {

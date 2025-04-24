@@ -7,7 +7,6 @@ const getAllSubscribers = async (req, res) => {
     const subscribers = await Subscriber.find({}).sort({ seq: -1 });
     res.status(200).json(subscribers);
   } catch (error) {
-    console.error('Fetch error:', error);
     res.status(500).json({ message: "Failed to fetch subscribers" });
   }
 };
@@ -50,7 +49,6 @@ const createSubscriber = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Create subscriber error:', error);
     return res.status(500).json({ 
       success: false,
       message: "Failed to create subscriber",
@@ -71,7 +69,6 @@ const deleteSubscriber = async (req, res) => {
       const subscriberToDelete = await Subscriber.findById(singleId);
       
       if (!subscriberToDelete) {
-        console.warn(`Subscriber not found: ${singleId}`);
         continue; // Skip to next ID if this one isn't found
       }
 

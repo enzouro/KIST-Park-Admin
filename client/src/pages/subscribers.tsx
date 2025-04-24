@@ -19,6 +19,13 @@ const Subscribers = () => {
   const [endDate, setEndDate] = useState('');
   const [isExporting, setIsExporting] = useState(false);
 
+  const handleResetFilters = () => {
+    setTimeFilter('all');
+    setStartDate('');
+    setEndDate('');
+  };
+  
+
   const {
     deleteConfirmation,
     error: deleteError,
@@ -38,6 +45,8 @@ const Subscribers = () => {
     resource: 'subscribers',
     hasPagination: false,
   });
+
+  
 
   
 
@@ -136,28 +145,60 @@ const Subscribers = () => {
     </Box>
   );
 
-  const handleExport = () => {
-    // Use the filtered rows to create CSV
-    const csvContent = convertToCSV(filteredRows);
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+      
+      // Create CSV with filtered data
+      const csvData = filteredRows.map(subscriber => ({
+        Sequence: subscriber.seq,
+        Email: subscriber.email,
+        'Subscription Date': new Date(subscriber.createdAt).toLocaleDateString()
+      }));
+      
+      // Convert to CSV string
+      const csvContent = [
+        Object.keys(csvData[0]).join(','), // Headers
+        ...csvData.map(row => Object.values(row).join(',')) // Data rows
+      ].join('\n');
+  
+      // Create and trigger download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      
+      // Add filter info to filename
+      const filename = getExportFilename();
+      link.setAttribute('download', filename);
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Export error:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const getExportFilename = () => {
+    if (startDate && endDate) {
+      return `subscribers_${startDate}_to_${endDate}.csv`;
+    }
     
-    // Create a Blob with the CSV data
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    
-    // Create a download link
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    // Set link properties
-    link.setAttribute('href', url);
-    link.setAttribute('download', `subscribers_export_${new Date().toISOString().split('T')[0]}.csv`);
-    
-    // Append link to document
-    document.body.appendChild(link);
-    
-    // Trigger download and cleanup
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    switch (timeFilter) {
+      case 'day':
+        return `subscribers_today.csv`;
+      case 'week':
+        return `subscribers_thisweek.csv`;
+      case 'month':
+        return `subscribers_thismonth.csv`;
+      default:
+        return `subscribers_all_${new Date().toISOString().split('T')[0]}.csv`;
+    }
   };
 
   const columns: GridColDef[] = [
@@ -220,30 +261,42 @@ const Subscribers = () => {
         </Typography>
 
         <Box sx={{
-          display: 'flex',
-          flexDirection: 'row',
-          justifyContent: 'space-between', // This will push items to the edges
-          gap: 1, 
-          padding: 1, 
-        }}>
-          <Box sx={{ 
-            display: 'flex',
-            gap: 5,
-            flex: 1, // This will allow the filters to take up available space
-          }}>
-            {renderFilterButtons()}
-            {renderDateFilters()}
-            
-          </Box>
+  display: 'flex',
+  flexDirection: 'row',
+  alignItems: 'center', // Add this to vertically center items
+  gap: 1, 
+  padding: 1, 
+}}>
+  <Box sx={{ 
+    display: 'flex',
+    gap: 2,
+    alignItems: 'center',
+  }}>
+    {renderFilterButtons()}
+    {renderDateFilters()}
+    <Button
+      size="small"
+      variant="outlined"
+      color="error"
+      onClick={handleResetFilters}
+      disabled={timeFilter === 'all' && !startDate && !endDate}
+      sx={{ height: 40 }} 
+    >
+      Reset
+    </Button>
+  </Box>
 
-          <CustomButton 
-            title={isExporting ? 'Exporting...' : 'Export'} 
-            backgroundColor={'primary.light'} 
-            color={'primary.dark'}
-            handleClick={handleExport}
-            disabled={isExporting || !filteredRows.length}
-          />
-        </Box>
+  {/* Keep the export button on the right */}
+  <Box sx={{ marginLeft: 'auto' }}> 
+    <CustomButton 
+      title={isExporting ? 'Exporting...' : 'Export'} 
+      backgroundColor={'primary.light'} 
+      color={'primary.dark'}
+      handleClick={handleExport}
+      disabled={isExporting || !filteredRows.length}
+    />
+  </Box>
+</Box>
 
         <Box sx={{ 
           flex: 1,

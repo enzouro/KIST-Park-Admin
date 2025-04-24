@@ -46,14 +46,12 @@ const processImages = async (images) => {
           // Check image size before processing
           const base64Size = image.length * (3/4);
           if (base64Size > 10 * 1024 * 1024) { // 10MB limit
-            console.warn('Image too large, skipping');
             return null;
           }
 
           const uploadResult = await cloudinary.uploader.upload(image, uploadOptions);
           return uploadResult.url;
         } catch (error) {
-          console.error('Lightweight upload error:', error);
           return null;
         }
       }
@@ -87,7 +85,7 @@ const deleteImageFromCloudinary = async (imageUrl) => {
     deleteImageFromCloudinary.deletedCache.add(publicId);
     return true;
   } catch (error) {
-    console.error('Lightweight delete error:', error);
+
     return false;
   }
 };
@@ -135,7 +133,6 @@ const getHighlights = async (req, res) => {
 
     res.status(200).json(highlights);
   } catch (err) {
-    console.log(err.message);
     res.status(500).json({ message: 'Fetching highlights failed, please try again later' });
   }
 };
@@ -171,7 +168,6 @@ const getHighlightById = async (req, res) => {
   
     res.status(200).json(formattedHighlight);
   } catch (err) {
-    console.error("Error fetching highlight:", err);
     res.status(500).json({ message: 'Failed to get highlight details' });
   }
 };
@@ -204,7 +200,6 @@ const createHighlight = async (req, res) => {
             throw new Error('Category not found');
           }
         } catch (error) {
-          console.error('Category validation error:', error);
           throw new Error(`Category validation failed: ${error.message}`);
         }
       }
@@ -221,7 +216,6 @@ const createHighlight = async (req, res) => {
         throw new Error('Category not found');
       }
     } catch (error) {
-      console.error('Category validation error:', error);
       throw new Error(`Category validation failed: ${error.message}`);
     }
   }
@@ -265,7 +259,6 @@ const createHighlight = async (req, res) => {
       highlight
     });
   } catch (err) {
-    console.error('Create error:', err);
     res.status(500).json({ 
       message: 'Failed to create highlight', 
       error: err.message 
@@ -302,7 +295,6 @@ const updateHighlight = async (req, res) => {
             throw new Error('Category not found');
           }
         } catch (error) {
-          console.error('Category validation error:', error);
           throw new Error(`Category validation failed: ${error.message}`);
         }
       }
@@ -362,7 +354,6 @@ const updateHighlight = async (req, res) => {
       highlight: updatedHighlight
     });
   } catch (err) {
-    console.error('Update error:', err);
     res.status(500).json({ 
       message: 'Failed to update highlight',
       error: err.message 
@@ -383,7 +374,6 @@ const deleteHighlight = async (req, res) => {
       const highlightToDelete = await Highlight.findById(singleId);
       
       if (!highlightToDelete) {
-        console.warn(`Highlight not found: ${singleId}`);
         continue; // Skip to next ID if this one isn't found
       }
 
@@ -398,7 +388,9 @@ const deleteHighlight = async (req, res) => {
         const failures = results.filter(r => r.status === 'rejected');
         
         if (failures.length > 0) {
-          console.warn(`Failed to delete ${failures.length} images for highlight ${singleId}`);
+          res.status(500).json({
+            message: `Failed to delete some images for highlight ${singleId}`,
+          });
         }
       }
 
@@ -410,7 +402,6 @@ const deleteHighlight = async (req, res) => {
       message: `Successfully deleted ${ids.length} ${ids.length === 1 ? 'highlight' : 'highlights'}` 
     });
   } catch (err) {
-    console.error('Delete error:', err);
     res.status(500).json({ 
       message: 'Failed to delete one or more highlights' 
     });
@@ -434,7 +425,6 @@ const getDashboardHighlights = async (req, res) => {
 
     res.status(200).json(highlights);
   } catch (err) {
-    console.error('Dashboard fetch error:', err);
     res.status(500).json({ 
       message: 'Failed to fetch dashboard highlights' 
     });

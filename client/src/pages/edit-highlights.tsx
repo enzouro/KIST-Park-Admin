@@ -118,7 +118,6 @@ const EditHighlights = () => {
 
   // Form submission handler
   const onFinishHandler = async (data: HighlightsFormValues) => {
-    try {
       const formattedData = {
         ...data,
         date: formatDateForAPI(data.date),
@@ -126,9 +125,6 @@ const EditHighlights = () => {
       };
       await onFinish(formattedData);
       navigate('/highlights');
-    } catch (error) {
-      console.error("Error submitting form:", error);
-    }
   };
 
   // Loading state

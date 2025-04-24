@@ -38,7 +38,6 @@ const getPressReleases = async (req, res) => {
 
     res.status(200).json(pressReleases);
   } catch (err) {
-    console.error('Fetch error:', err);
     res.status(500).json({ message: 'Fetching press releases failed, please try again later' });
   }
 };
@@ -65,7 +64,6 @@ const getPressReleaseById = async (req, res) => {
       res.status(404).json({ message: 'Press release not found' });
     }
   } catch (err) {
-    console.error("Error fetching press release:", err);
     res.status(500).json({ message: 'Failed to get press release details' });
   }
 };

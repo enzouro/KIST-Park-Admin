@@ -8,7 +8,6 @@ export const getAllHighlights = async (req, res) => {
 
     res.status(200).json(highlights);
   } catch (error) {
-    console.error('Error fetching highlights:', error);
     res.status(500).json({ message: 'Failed to fetch highlights' });
   }
 };
@@ -27,7 +26,6 @@ export const getHighlightById = async (req, res) => {
 
     res.status(200).json(highlight);
   } catch (error) {
-    console.error('Error fetching highlight by ID:', error);
     res.status(500).json({ message: 'Failed to fetch highlight' });
   }
 };

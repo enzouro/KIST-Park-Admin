@@ -63,7 +63,6 @@ const GoogleButton: React.FC<{ onLogin: (res: CredentialResponse) => void }> = (
                 window.location.href = '/unauthorized';
               }
             } catch (error) {
-              console.error('Login error:', error);
               window.location.href = '/unauthorized';
             }
           }
@@ -75,7 +74,7 @@ const GoogleButton: React.FC<{ onLogin: (res: CredentialResponse) => void }> = (
         type: 'standard',
       });
     } catch (error) {
-      console.log(error);
+      window.location.href = '/login';
     }
   }, [onLogin]);
 

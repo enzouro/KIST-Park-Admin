@@ -45,13 +45,6 @@ const CategoryDropdown = ({ value, onChange, error }: CategoryDropdownProps) => 
   };
 
 
-  useEffect(() => {
-    if (categoryData?.data) {
-      console.log('Available categories:', categoryData.data);
-      console.log('Current value:', value);
-    }
-  }, [categoryData, value]);
-
   // Check if the value exists in available options
 // Modify the isValidValue check to handle initial loading state
     const isValidValue = !isLoading && 
@@ -68,7 +61,6 @@ const CategoryDropdown = ({ value, onChange, error }: CategoryDropdownProps) => 
           );
           
           if (!valueExists) {
-            console.log('Invalid category ID, resetting...');
             onChange('');
           }
         }
@@ -99,7 +91,7 @@ const CategoryDropdown = ({ value, onChange, error }: CategoryDropdownProps) => 
         },
       );
     } catch (error) {
-      console.error('Error adding category:', error);
+      
     }
   };
 
