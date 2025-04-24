@@ -178,7 +178,6 @@ const Subscribers = () => {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Export error:', error);
     } finally {
       setIsExporting(false);
     }
