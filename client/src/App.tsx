@@ -118,7 +118,7 @@ const checkAuthAndTokenValidity = async () => {
     if (!user) return;
     
     const parsedUser = JSON.parse(user);
-    const response = await fetch(`http://localhost:8080/api/v1/users/${parsedUser.userid}`, {
+    const response = await fetch(`https://kist-park-admin.onrender.com/api/v1/users/${parsedUser.userid}`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -171,7 +171,7 @@ const checkAuthAndTokenValidity = async () => {
 
       // Save user to MongoDB
       if (profileObj) {
-        const response = await fetch('http://localhost:8080/api/v1/users', {
+        const response = await fetch('https://kist-park-admin.onrender.com/api/v1/users', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -274,7 +274,7 @@ const checkAuthAndTokenValidity = async () => {
       <GlobalStyles styles={{ html: { WebkitFontSmoothing: 'auto' } }} />
       <RefineSnackbarProvider>
         <Refine
-          dataProvider={dataProvider('http://localhost:8080/api/v1', axiosInstance)}
+          dataProvider={dataProvider('https://kist-park-admin.onrender.com/api/v1', axiosInstance)}
           notificationProvider={notificationProvider}
           ReadyPage={ReadyPage}
           catchAll={<ErrorComponent />}

@@ -20,7 +20,7 @@ const app = express();
 
 const corsOptions = {
   origin: function (origin, callback) {
-    const allowedOrigins = ['http://localhost:3000','http://localhost:4000'];
+    const allowedOrigins = ['http://localhost:3000','http://localhost:4000', 'https://kist-park-admin.netlify.app'];
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
