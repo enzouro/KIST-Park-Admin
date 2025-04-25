@@ -1,4 +1,4 @@
-import React, { useContext, useMemo, useState } from 'react';
+import React, { useContext, useMemo, useState, useEffect } from 'react';
 import { 
   DataGrid, 
   GridColDef,
@@ -9,9 +9,16 @@ import {
   Toolbar,
   Typography,
   Box,
-  Stack
+  Stack,
+  useMediaQuery,
+  Theme,
+  IconButton,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText
 } from '@pankod/refine-mui';
-import { Delete, Edit, Visibility, Restore } from '@mui/icons-material';
+import { Delete, Edit, Visibility, Restore, MoreVert } from '@mui/icons-material';
 import { ColorModeContext } from 'contexts';
 import CustomIconButton from 'components/common/CustomIconButton';
 
@@ -23,7 +30,7 @@ interface CustomTableProps {
   onEdit?: (id: string) => void;
   onDelete?: (ids: string[]) => void;
   onRestore?: (ids: string[]) => void;
-  initialSortModel?: GridSortModel; // Use GridSortModel type
+  initialSortModel?: GridSortModel;
 }
 
 const CustomTableToolbar = ({
@@ -43,6 +50,9 @@ const CustomTableToolbar = ({
   selectedId?: string;
   rows: any[];
 }) => {
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
+
   // Find the selected row(s)
   const selectedRows = rows.filter(row => selectedId?.split(',').includes(row.id));
   
@@ -50,88 +60,168 @@ const CustomTableToolbar = ({
   const allDeleted = selectedRows.every(row => row.deleted);
   const noneDeleted = selectedRows.every(row => !row.deleted);
 
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const actionMenu = (
+    <Menu
+      anchorEl={anchorEl}
+      open={Boolean(anchorEl)}
+      onClose={handleMenuClose}
+    >
+      {numSelected === 1 && (
+        <MenuItem onClick={() => {
+          selectedId && onView?.(selectedId);
+          handleMenuClose();
+        }}>
+          <ListItemIcon>
+            <Visibility fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>View</ListItemText>
+        </MenuItem>
+      )}
+
+      {numSelected === 1 && noneDeleted && (
+        <MenuItem onClick={() => {
+          selectedId && onEdit?.(selectedId);
+          handleMenuClose();
+        }}>
+          <ListItemIcon>
+            <Edit fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Edit</ListItemText>
+        </MenuItem>
+      )}
+
+      {allDeleted && onRestore && (
+        <MenuItem onClick={() => {
+          selectedId && onRestore(selectedId.split(','));
+          handleMenuClose();
+        }}>
+          <ListItemIcon>
+            <Restore fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Restore {numSelected > 1 ? `(${numSelected})` : ''}</ListItemText>
+        </MenuItem>
+      )}
+
+      {onDelete && (
+        <MenuItem onClick={() => {
+          selectedId && onDelete(selectedId.split(','));
+          handleMenuClose();
+        }}>
+          <ListItemIcon>
+            <Delete fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Delete {numSelected > 1 ? `(${numSelected})` : ''}</ListItemText>
+        </MenuItem>
+      )}
+    </Menu>
+  );
+
   return (
     <Toolbar
       sx={{
-        pl: { sm: 2 },
+        pl: { xs: 1, sm: 2 },
         pr: { xs: 1, sm: 1 },
         ...(numSelected > 0 && {
           bgcolor: 'rgba(25, 118, 210, 0.08)',
         }),
         display: 'flex',
         justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        minHeight: { xs: '56px', sm: '64px' }
       }}
     >
       <Typography
-        sx={{ flex: '1 1 100%' }}
+        sx={{ 
+          flex: '1 1 100%',
+          fontSize: { xs: '0.875rem', sm: '1rem' }
+        }}
         color="inherit"
         variant="subtitle1"
         component="div"
+        noWrap
       >
         {numSelected > 0 ? `${numSelected} selected` : 'All Records'}
       </Typography>
 
       {numSelected > 0 && (
-        <Stack direction="row" spacing={1}>
-          {numSelected === 1 && (
-            <>
-              {/* Always show View button */}
-              <CustomIconButton
-                title="View"
-                icon={<Visibility />}
-                backgroundColor="primary.light"
-                color="primary.dark"
-                handleClick={() => selectedId && onView?.(selectedId)}
-              />
+        isMobile ? (
+          <>
+            <IconButton
+              aria-label="more"
+              aria-controls="long-menu"
+              aria-haspopup="true"
+              onClick={handleMenuOpen}
+              size="small"
+            >
+              <MoreVert />
+            </IconButton>
+            {actionMenu}
+          </>
+        ) : (
+          <Stack direction="row" spacing={1}>
+            {numSelected === 1 && (
+              <>
+                <CustomIconButton
+                  title="View"
+                  icon={<Visibility />}
+                  backgroundColor="primary.light"
+                  color="primary.dark"
+                  handleClick={() => selectedId && onView?.(selectedId)}
+                />
 
-              {/* Edit button only for non-deleted items */}
-              {noneDeleted && (
-                <CustomIconButton
-                  title="Edit"
-                  icon={<Edit />}
-                  backgroundColor="warning.light"
-                  color="warning.dark"
-                  handleClick={() => selectedId && onEdit?.(selectedId)}
-                />
-              )}
+                {noneDeleted && (
+                  <CustomIconButton
+                    title="Edit"
+                    icon={<Edit />}
+                    backgroundColor="warning.light"
+                    color="warning.dark"
+                    handleClick={() => selectedId && onEdit?.(selectedId)}
+                  />
+                )}
 
-              {/* Restore button only for deleted items */}
-              {allDeleted && onRestore && (
-                <CustomIconButton
-                  title="Restore"
-                  icon={<Restore />}
-                  backgroundColor="success.light"
-                  color="success.dark"
-                  handleClick={() => selectedId && onRestore(selectedId.split(','))}
-                />
-              )}
-            </>
-          )}
-  
-          {numSelected > 1 && allDeleted && (
-            <>
-              {/* Restore button shown when all selected are deleted */}
-              {onRestore && (
-                <CustomIconButton
-                  title={`Restore ${numSelected}`}
-                  icon={<Restore />}
-                  backgroundColor="success.light"
-                  color="success.dark"
-                  handleClick={() => selectedId && onRestore(selectedId.split(','))}
-                />
-              )}
-            </>
-          )}
-  
-          {/* Delete button always shown */}
-          <CustomIconButton
-            title={`Delete ${numSelected > 1 ? `(${numSelected})` : ''}`}
-            icon={<Delete />}
-            backgroundColor="error.light"
-            color="error.dark"
-            handleClick={() => selectedId && onDelete?.(selectedId.split(','))}
-          />
-        </Stack>
+                {allDeleted && onRestore && (
+                  <CustomIconButton
+                    title="Restore"
+                    icon={<Restore />}
+                    backgroundColor="success.light"
+                    color="success.dark"
+                    handleClick={() => selectedId && onRestore(selectedId.split(','))}
+                  />
+                )}
+              </>
+            )}
+    
+            {numSelected > 1 && allDeleted && (
+              <>
+                {onRestore && (
+                  <CustomIconButton
+                    title={`Restore ${numSelected}`}
+                    icon={<Restore />}
+                    backgroundColor="success.light"
+                    color="success.dark"
+                    handleClick={() => selectedId && onRestore(selectedId.split(','))}
+                  />
+                )}
+              </>
+            )}
+    
+            <CustomIconButton
+              title={`Delete ${numSelected > 1 ? `(${numSelected})` : ''}`}
+              icon={<Delete />}
+              backgroundColor="error.light"
+              color="error.dark"
+              handleClick={() => selectedId && onDelete?.(selectedId.split(','))}
+            />
+          </Stack>
+        )
       )}
     </Toolbar>
   );
@@ -150,6 +240,33 @@ const CustomTable: React.FC<CustomTableProps> = ({
   const { mode } = useContext(ColorModeContext);
   const [selectionModel, setSelectionModel] = useState<GridSelectionModel>([]);
   const [sortModel, setSortModel] = useState<GridSortModel>(initialSortModel);
+  const [pageSize, setPageSize] = useState(10);
+  const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery((theme: Theme) => theme.breakpoints.down('md'));
+
+  // Responsive columns handling
+  const responsiveColumns = useMemo(() => {
+    if (isMobile) {
+      // On mobile, we show fewer columns
+      return columns.map(column => ({
+        ...column,
+        flex: 1,
+        minWidth: 100,
+        // Hide less important columns on mobile
+        hide: column.field === 'createdAt' || column.field === 'updatedAt' || column.hide
+      }));
+    } else if (isTablet) {
+      // On tablets, show more columns but still optimize
+      return columns.map(column => ({
+        ...column,
+        flex: 1,
+        minWidth: 120,
+        // Maybe hide only some columns
+        hide: column.field === 'updatedAt' || column.hide
+      }));
+    }
+    return columns;
+  }, [columns, isMobile, isTablet]);
 
   // Sorting logic for rows
   const sortedRows = useMemo(() => {
@@ -171,11 +288,20 @@ const CustomTable: React.FC<CustomTableProps> = ({
     });
   }, [rows, sortModel]);
 
+  // Adjust page size for smaller screens
+  useEffect(() => {
+    setPageSize(isMobile ? 5 : isTablet ? 7 : 10);
+  }, [isMobile, isTablet]);
+
   return (
-    <Box sx={{ width: '100%', height: '100%' }}>
+    <Box sx={{ 
+      width: '100%', 
+      height: '100%',
+      overflow: 'auto'
+    }}>
       <DataGrid
         rows={sortedRows}
-        columns={columns}
+        columns={responsiveColumns}
         checkboxSelection
         disableSelectionOnClick
         autoHeight={false}
@@ -183,6 +309,12 @@ const CustomTable: React.FC<CustomTableProps> = ({
         onSelectionModelChange={(newSelectionModel) => {
           setSelectionModel(newSelectionModel);
         }}
+        pagination
+        pageSize={pageSize}
+        onPageSizeChange={setPageSize}
+        rowsPerPageOptions={isMobile ? [5, 10] : [10, 25, 50]}
+        sortModel={sortModel}
+        onSortModelChange={(model) => setSortModel(model)}
         components={{
           Toolbar: () => (
             <CustomTableToolbar
@@ -198,7 +330,6 @@ const CustomTable: React.FC<CustomTableProps> = ({
         }}
         sx={{
           height: containerHeight,
-          // Beautiful scrollbar styling
           '& .MuiDataGrid-main': {
             overflow: 'hidden',
             '& ::-webkit-scrollbar': {
@@ -226,9 +357,10 @@ const CustomTable: React.FC<CustomTableProps> = ({
             backgroundColor: 'rgba(0, 0, 0, 0.04)'
           },
           '& .MuiDataGrid-cell': {
-            padding: '8px',
+            padding: { xs: '4px 6px', sm: '8px' },
             whiteSpace: 'normal',
-            wordWrap: 'break-word'
+            wordWrap: 'break-word',
+            fontSize: { xs: '0.75rem', sm: '0.875rem' }
           },
           '& .MuiDataGrid-columnHeaders': {
             backgroundColor: mode === 'light' ? '#f5f5f5' : '#333333',
@@ -236,8 +368,15 @@ const CustomTable: React.FC<CustomTableProps> = ({
             color: mode === 'light' ? 'inherit' : '#f5f5f5'
           },
           '& .MuiDataGrid-columnHeader': {
-            padding: '8px',
-            fontWeight: 'bold'
+            padding: { xs: '4px 6px', sm: '8px' },
+            fontWeight: 'bold',
+            fontSize: { xs: '0.75rem', sm: '0.875rem' }
+          },
+          '& .MuiTablePagination-root': {
+            fontSize: { xs: '0.75rem', sm: '0.875rem' }
+          },
+          '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+            fontSize: { xs: '0.75rem', sm: '0.875rem' }
           }
         }}
       />

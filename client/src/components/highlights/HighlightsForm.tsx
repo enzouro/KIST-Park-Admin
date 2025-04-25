@@ -5,7 +5,9 @@ import {
   FormControl, 
   Paper, 
   TextField, 
-  Typography 
+  Typography, 
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import { Controller } from 'react-hook-form';
 import { Close, Publish } from '@mui/icons-material';
@@ -18,7 +20,7 @@ import ImageUploader from './ImageUploader';
 import SDGSelect from './SDGDropdown';
 import CategoryDropdown from 'components/category/CategoryDropdown';
 import useNextSequence from 'hooks/useNextSequence';
-import { formatDateForInput } from 'utils/dateHelper'; // Import the utility function
+import { formatDateForInput } from 'utils/dateHelper';
 import { CustomThemeProvider } from 'utils/customThemeProvider';
 
 const STATUS_OPTIONS = [
@@ -47,6 +49,9 @@ const HighlightsForm: React.FC<HighlightsFormProps> = ({
 }) => {
   const navigate = useNavigate();
   const isCreating = type === 'Create';
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMedium = useMediaQuery(theme.breakpoints.down('md'));
   
   // Get the next sequence number
   const { currentSeq, isLoading: sequenceLoading } = useNextSequence({
@@ -68,10 +73,10 @@ const HighlightsForm: React.FC<HighlightsFormProps> = ({
       ? data.images.filter(Boolean) // Remove any null/undefined values
       : [];
 
-  // Ensure category is a valid MongoDB ObjectId or empty string
-  const categoryId = data.category && typeof data.category === 'object' 
-    ? data.category._id 
-    : (data.category || '');
+    // Ensure category is a valid MongoDB ObjectId or empty string
+    const categoryId = data.category && typeof data.category === 'object' 
+      ? data.category._id 
+      : (data.category || '');
     
     const updatedData = { 
       ...data,
@@ -88,7 +93,11 @@ const HighlightsForm: React.FC<HighlightsFormProps> = ({
   };
   
   if (sequenceLoading) {
-    return <CircularProgress />;
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" height="50vh">
+        <CircularProgress size={isMobile ? 40 : 60} />
+      </Box>
+    );
   }
 
   // Format dates for the form display
@@ -100,10 +109,10 @@ const HighlightsForm: React.FC<HighlightsFormProps> = ({
       <Paper 
         elevation={2} 
         sx={{ 
-          padding: '32px',
-          margin: '24px auto',
+          padding: { xs: '16px', sm: '24px', md: '32px' },
+          margin: { xs: '12px', sm: '16px', md: '24px' },
           maxWidth: '100%',
-          borderRadius: '16px',
+          borderRadius: { xs: '8px', sm: '12px', md: '16px' },
           transition: 'transform 0.2s ease-in-out',
           '&:hover': {
             transform: 'translateY(-2px)'
@@ -111,10 +120,10 @@ const HighlightsForm: React.FC<HighlightsFormProps> = ({
         }}
       >
         <Typography 
-          variant="h4" 
+          variant={isMobile ? "h5" : "h4"} 
           sx={{ 
             textAlign: 'left',
-            mb: 4,
+            mb: { xs: 2, sm: 3, md: 4 },
             fontWeight: 600,
           }}
         >
@@ -126,17 +135,17 @@ const HighlightsForm: React.FC<HighlightsFormProps> = ({
             width: '100%', 
             display: 'flex', 
             flexDirection: 'column', 
-            gap: '24px' 
+            gap: isMobile ? '16px' : '24px' 
           }}
           onSubmit={handleSubmit(onSubmit)}
         >
           <Box sx={{ 
             display: 'flex', 
             flexDirection: { xs: 'column', sm: 'row' }, 
-            gap: 2,
+            gap: { xs: 2, md: 3 },
             '& .MuiFormControl-root': { flex: 1 }
           }}>
-            <FormControl>
+            <FormControl sx={{ mb: { xs: 1, sm: 0 } }}>
               <TextField
                 label="Sequence Number"
                 type="number"
@@ -144,6 +153,7 @@ const HighlightsForm: React.FC<HighlightsFormProps> = ({
                 value={currentSeq || ''}
                 disabled
                 InputLabelProps={{ shrink: true }}
+                size={isMobile ? "small" : "medium"}
               />
             </FormControl>
 
@@ -152,17 +162,16 @@ const HighlightsForm: React.FC<HighlightsFormProps> = ({
                 label="Created At"
                 type="date"
                 {...register('createdAt')}
-                defaultValue={formCreatedAt} // Use formatted date here
+                defaultValue={formCreatedAt}
                 InputLabelProps={{ shrink: true }}
+                size={isMobile ? "small" : "medium"}
               />
             </FormControl>
           </Box>
 
           <Box sx={{ 
-            display: 'flex', 
-            flexDirection: { xs: 'column', sm: 'row' }, 
-            gap: 2,
-            '& .MuiFormControl-root': { flex: 1 }
+            width: '100%',
+            '& .MuiFormControl-root': { width: '100%' }
           }}>
             <TextField
               label="Title"
@@ -171,23 +180,26 @@ const HighlightsForm: React.FC<HighlightsFormProps> = ({
               error={!!errors?.title}
               defaultValue={initialValues?.title || ''}
               required
+              fullWidth
+              size={isMobile ? "small" : "medium"}
             />
           </Box>
 
           <Box sx={{ 
             display: 'flex', 
             flexDirection: { xs: 'column', sm: 'row' }, 
-            gap: 2,
+            gap: { xs: 2, md: 3 },
             '& .MuiFormControl-root': { flex: 1 }
           }}>
-            <FormControl>
+            <FormControl sx={{ mb: { xs: 1, sm: 0 } }}>
               <TextField
-                label="Event Date" // Clarified label
+                label="Event Date"
                 type="date"
                 {...register('date')}
-                defaultValue={formEventDate || ''} // Use formatted date here
+                defaultValue={formEventDate || ''}
                 InputLabelProps={{ shrink: true }}
                 helperText="Date when the event happened"
+                size={isMobile ? "small" : "medium"}
               />
             </FormControl>
             <TextField
@@ -196,72 +208,81 @@ const HighlightsForm: React.FC<HighlightsFormProps> = ({
               {...register('location')}
               error={!!errors?.location}
               defaultValue={initialValues?.location || ''}
+              size={isMobile ? "small" : "medium"}
             />
           </Box>
+          
           <Box sx={{ 
             display: 'flex', 
             flexDirection: { xs: 'column', sm: 'row' }, 
-            gap: 2,
+            gap: { xs: 2, md: 3 },
             '& .MuiFormControl-root': { flex: 1 }
           }}>
-            
+            <Box sx={{ mb: { xs: 1, sm: 0 }, width: { xs: '100%', sm: '50%' } }}>
+              <Controller
+                name="category"
+                control={control}
+                defaultValue={initialValues?.category?._id || initialValues?.category || ''}
+                render={({ field }) => (
+                  <CategoryDropdown
+                    value={field.value}
+                    onChange={(value) => {
+                      field.onChange(value);
+                    }}
+                    error={!!errors?.category}
+                  />
+                )} 
+              />
+            </Box>
+            <Box sx={{ width: { xs: '100%', sm: '50%' } }}>
+              <Controller
+                name="status"
+                control={control}
+                defaultValue={initialValues?.status || 'draft'}
+                render={({ field }) => (
+                  <TextField
+                    select
+                    label="Status"
+                    value={field.value}
+                    onChange={field.onChange}
+                    helperText="Please select the status"
+                    variant="filled"
+                    SelectProps={{
+                      native: true,
+                    }}
+                    fullWidth
+                    size={isMobile ? "small" : "medium"}
+                  >
+                    {STATUS_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </TextField>
+                )}
+              />
+            </Box>
+          </Box>
+
+          {/* SDG Selection component */}
+          <Box sx={{ mb: { xs: 1, sm: 2 } }}>
             <Controller
-              name="category"
+              name="sdg"
               control={control}
-              defaultValue={initialValues?.category?._id || initialValues?.category || ''}// Simplify this
+              defaultValue={initialValues?.sdg || []}
               render={({ field }) => (
-                <CategoryDropdown
-                  value={field.value}
-                  onChange={(value) => {
-                    field.onChange(value);
-                  }}
-                  error={!!errors?.category}
-                />
-              )} 
-            />
-            <Controller
-              name="status"
-              control={control}
-              defaultValue={initialValues?.status || 'draft'}
-              render={({ field }) => (
-                <TextField
-                  select
-                  label="Status"
-                  value={field.value}
+                <SDGSelect
+                  value={field.value || []}
                   onChange={field.onChange}
-                  helperText="Please select the status"
-                  variant="filled"
-                  SelectProps={{
-                    native: true,
-                  }}
-                >
-                  {STATUS_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </TextField>
+                  error={!!errors?.sdg}
+                />
               )}
             />
           </Box>
 
-          {/* SDG Selection component */}
-          <Controller
-            name="sdg"
-            control={control}
-            defaultValue={initialValues?.sdg || []}
-            render={({ field }) => (
-              <SDGSelect
-                value={field.value || []}
-                onChange={field.onChange}
-                error={!!errors?.sdg}
-              />
-            )}
-          />
-
-          {/* Rich Text Area Added Here */}
-          <Box>
-            <Typography variant="subtitle1" sx={{ mb: 2 }}>
+          {/* Rich Text Area */}
+          <Box sx={{ mb: { xs: 2, sm: 3 } }}>
+            <Typography variant={isMobile ? "subtitle2" : "subtitle1"} sx={{ mb: { xs: 1, sm: 2 } }}>
               Content
             </Typography>
             <Controller
@@ -271,18 +292,16 @@ const HighlightsForm: React.FC<HighlightsFormProps> = ({
               render={({ field }) => (
                 <RichTextArea 
                   value={field.value} 
-                  onChange={field.onChange} 
+                  onChange={field.onChange}
+                
                 />
               )}
             />
           </Box>
 
           <Box sx={{ 
-            display: 'flex', 
-            flexDirection: { xs: 'column', sm: 'row' }, 
-            gap: 2,
-            alignItems: 'center',
-            '& .MuiFormControl-root': { flex: 1 }
+            mb: { xs: 2, sm: 3 },
+            '& .MuiFormControl-root': { width: '100%' }
           }}>
             <Controller
               name="images"
@@ -297,20 +316,29 @@ const HighlightsForm: React.FC<HighlightsFormProps> = ({
             />
           </Box>
 
-          <Box display="flex" justifyContent="center" gap={2} mt={3}>
+          <Box 
+            display="flex" 
+            flexDirection={isMobile ? "column" : "row"}
+            justifyContent="center" 
+            gap={isMobile ? 1.5 : 2} 
+            mt={isMobile ? 2 : 3}
+          >
             <CustomButton
               type="submit"
               title={isCreating ? "Create" : "Update"}
               backgroundColor="primary.light"
               color="primary.dark"
-              icon={<Publish />}
+              icon={<Publish fontSize={isMobile ? "small" : "medium"} />}
+              fullWidth={isMobile}
             />
             <CustomButton
               title="Cancel"
               backgroundColor="error.light"
               color="error.dark"
-              icon={<Close />}
+              icon={<Close fontSize={isMobile ? "small" : "medium"} />}
               handleClick={() => navigate('/highlights')}
+              fullWidth={isMobile}
+
             />
           </Box>
         </form>

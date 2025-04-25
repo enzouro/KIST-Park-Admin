@@ -448,7 +448,7 @@ export const Sider: typeof DefaultSider = ({ render }) => {
           sx={{
             display: { xs: 'block', md: 'none' },
             position: 'fixed',
-            top: '64px',
+            top: '24px',
             left: '0px',
             borderRadius: '0 6px 6px 0',
             bgcolor: '#475be8',

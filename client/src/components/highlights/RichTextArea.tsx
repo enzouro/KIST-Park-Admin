@@ -198,6 +198,7 @@ const TiptapEditor = ({
       {/* Editor Content */}
       <Box 
         sx={{ 
+          
           position: 'relative',
           minHeight: 200,
           cursor: 'text',

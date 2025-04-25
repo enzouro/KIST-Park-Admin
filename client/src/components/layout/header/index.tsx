@@ -18,7 +18,7 @@ export const Header: React.FC = () => {
   const showUserInfo = user && (user.name || user.avatar);
 
   return (
-    <AppBar color="default" position="sticky" elevation={0} sx={{ background: mode === 'dark' ? '#333' : '#FCFCFC' }}>
+    <AppBar color="default" position="sticky" elevation={0} sx={{ background: mode === 'dark' ? '#333' : '#FCFCFC', overflow: 'hidden' }}>
       <Toolbar>
         <Stack direction="row" width="100%" justifyContent="flex-end" alignItems="center">
           <Tooltip title={`Switch to ${mode === 'dark' ? 'Light' : 'Dark'} Mode`}>

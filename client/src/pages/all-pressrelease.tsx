@@ -1,7 +1,16 @@
 import { useMemo, useState } from 'react';
 import { useTable } from '@pankod/refine-core';
-import { GridColDef, Box, Paper, Typography, Stack, TextField, Button } from '@pankod/refine-mui';
-import { Add } from '@mui/icons-material';
+import { 
+  GridColDef, 
+  Box, 
+  Paper, 
+  Typography, 
+  TextField, 
+  Button,
+  useMediaQuery,
+  useTheme
+} from '@pankod/refine-mui';
+import { Add, Close } from '@mui/icons-material';
 import { useNavigate } from '@pankod/refine-react-router-v6';
 import CustomButton from 'components/common/CustomButton';
 import useDynamicHeight from 'hooks/useDynamicHeight';
@@ -11,6 +20,7 @@ import useDeleteWithConfirmation from 'hooks/useDeleteWithConfirmation';
 import ErrorDialog from 'components/common/ErrorDialog';
 import LoadingDialog from 'components/common/LoadingDialog';
 import { CustomThemeProvider } from 'utils/customThemeProvider';
+import { IconButton } from '@mui/material';
 
 const AllPressReleases = () => {
   const navigate = useNavigate();
@@ -18,6 +28,11 @@ const AllPressReleases = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
+
+  // Theme for responsive breakpoints
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const {
     deleteConfirmation,
@@ -58,31 +73,54 @@ const AllPressReleases = () => {
     });
   }, [allPressReleases, searchTerm, startDate, endDate]);
 
-  const columns: GridColDef[] = [
-    { field: 'seq', headerName: 'Seq', flex: 0.5, sortable: true },
-    { field: 'title', headerName: 'Title', flex: 2 },
-    { field: 'publisher', headerName: 'Publisher', flex: 1 },
-    { 
-      field: 'date', 
-      headerName: 'Date', 
-      flex: 1,
-      renderCell: (params) => (
-        <Typography variant="body2">
-          {params.row.date ? new Date(params.row.date).toLocaleDateString() : ''}
-        </Typography>
-      )
-    },
-    { 
-      field: 'createdAt', 
-      headerName: 'Created At', 
-      flex: 1,
-      renderCell: (params) => (
-        <Typography variant="body2">
-          {params.row.createdAt ? new Date(params.row.createdAt).toLocaleDateString() : ''}
-        </Typography>
-      )
-    },
-  ];
+  // Responsive columns configuration
+  const getColumns = () => {
+    if (isMobile) {
+      return [
+        { field: 'seq', headerName: 'Seq', flex: 0.5, sortable: true },
+        { field: 'title', headerName: 'Title', flex: 2 },
+        { 
+          field: 'date', 
+          headerName: 'Date', 
+          flex: 1,
+          renderCell: (params: { row: { date: string | number | Date; }; }) => (
+            <Typography variant="body2">
+              {params.row.date ? new Date(params.row.date).toLocaleDateString() : ''}
+            </Typography>
+          )
+        }
+      ];
+    }
+    
+    // Return all columns for desktop view
+    return [
+      { field: 'seq', headerName: 'Seq', flex: 0.5, sortable: true },
+      { field: 'title', headerName: 'Title', flex: 2 },
+      { field: 'publisher', headerName: 'Publisher', flex: 1 },
+      { 
+        field: 'date', 
+        headerName: 'Date', 
+        flex: 1,
+        renderCell: (params: { row: { date: string | number | Date; }; }) => (
+          <Typography variant="body2">
+            {params.row.date ? new Date(params.row.date).toLocaleDateString() : ''}
+          </Typography>
+        )
+      },
+      { 
+        field: 'createdAt', 
+        headerName: 'Created At', 
+        flex: 1,
+        renderCell: (params: { row: { createdAt: string | number | Date; }; }) => (
+          <Typography variant="body2">
+            {params.row.createdAt ? new Date(params.row.createdAt).toLocaleDateString() : ''}
+          </Typography>
+        )
+      },
+    ];
+  };
+
+  const columns = getColumns();
 
   const handleView = (id: string) => {
     navigate(`/press-release/show/${id}`);
@@ -126,91 +164,185 @@ const AllPressReleases = () => {
         elevation={3} 
         sx={{ 
           height: {
-            xs: '700px',
+            xs: '100vh', // Full height on mobile
             sm: '700px',
             md: containerHeight,
             lg: containerHeight,
           },
+          width: '100%', // Full width container
+          maxWidth: {
+            xs: '100%', // Full width on mobile
+            sm: '100%', // Full width on tablet
+            md: '100%', // Full width on desktop
+          },
           display: 'flex',
           flexDirection: 'column',
-          m: 2,
+          m: { xs: 0, sm: 2 }, // No margin on mobile
           overflow: 'hidden'
         }}
       >
         <Typography 
           variant="h4" 
           sx={{ 
-            p: 2,
+            p: { xs: 1, sm: 2 },
             fontWeight: 600,
+            fontSize: { xs: '1.25rem', sm: '2rem' } // Smaller font on mobile
           }}
         >
           {!allPressReleases.length ? 'No Press Releases' : 'All Press Releases'}
         </Typography>
         
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: 'column',
-          gap: 2,
-          padding: 2,
-        }}>
-          {/* Search and Date Filter Grid */}
-          <Box 
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', md: '2fr 3fr auto' },
-              gap: 2,
-            }}
-          >
-            {/* Search Box */}
-            <Box>
+        {/* Mobile layout */}
+        {isMobile ? (
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            gap: 0.5,
+            padding: 0.5,
+          }}>
+            {/* Top row with search and add button */}
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 0.5, 
+              alignItems: 'center'
+            }}>
               <TextField
-                fullWidth
                 size="small"
-                label="Search"
-                placeholder="Search by title, publisher, or sequence"
+                placeholder="Search..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                InputProps={{ 
+                  sx: { 
+                    height: '32px',
+                    fontSize: '0.875rem'
+                  }
+                }}
+                sx={{ flex: 1 }}
               />
-            </Box>
+              <CustomButton
+                title=""
+                backgroundColor="#005099"
+                color="#ffffff"
+                icon={<Add />}
+                handleClick={() => navigate(`/press-release/create`)}
 
-            {/* Date Range */}
+              />
+              
+              <IconButton
+                size="small"
+                onClick={() => setFiltersExpanded(!filtersExpanded)}
+                sx={{ 
+                  padding: '4px',
+                  height: '32px',
+                  width: '32px'
+                }}
+              >
+                {filtersExpanded ? <Close fontSize="small" /> : <Add fontSize="small" />}
+              </IconButton>
+            </Box>
+            
+            {/* Expandable date filters */}
+            {filtersExpanded && (
+              <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5 }}>
+                <TextField
+                  size="small"
+                  type="date"
+                  placeholder="Start Date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  InputProps={{ 
+                    sx: { 
+                      height: '32px',
+                      fontSize: '0.75rem'
+                    }
+                  }}
+                  sx={{ flex: 1 }}
+                />
+                <TextField
+                  size="small"
+                  type="date"
+                  placeholder="End Date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  InputProps={{ 
+                    sx: { 
+                      height: '32px',
+                      fontSize: '0.75rem'
+                    }
+                  }}
+                  sx={{ flex: 1 }}
+                />
+              </Box>
+            )}
+          </Box>
+        ) : (
+          // Original desktop layout
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            gap: 2,
+            padding: 2,
+          }}>
+            {/* Search and Date Filter Grid */}
             <Box 
-              sx={{ 
-                display: 'flex',
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', md: '2fr 3fr auto' },
                 gap: 2,
               }}
             >
-              <TextField
-                fullWidth
-                size="small"
-                label="Start Date"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-              />
-              <TextField
-                fullWidth
-                size="small"
-                label="End Date"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
+              {/* Search Box */}
+              <Box>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Search"
+                  placeholder="Search by title, publisher, or sequence"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </Box>
+
+              {/* Date Range */}
+              <Box 
+                sx={{ 
+                  display: 'flex',
+                  gap: 2,
+                }}
+              >
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Start Date"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                />
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="End Date"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Box>
+
+              {/* Add Button */}
+              <CustomButton
+                title="Add"
+                backgroundColor="#005099"
+                color="#ffffff"
+                icon={<Add />}
+                handleClick={() => navigate(`/press-release/create`)}
               />
             </Box>
-
-            {/* Add Button */}
-            <CustomButton
-              title="Add"
-              backgroundColor="#005099"
-              color="#ffffff"
-              icon={<Add />}
-              handleClick={() => navigate(`/press-release/create`)}
-            />
           </Box>
-        </Box>
+        )}
 
+        {/* Table Container */}
         <Box sx={{ 
           flex: 1,
           width: '100%',
