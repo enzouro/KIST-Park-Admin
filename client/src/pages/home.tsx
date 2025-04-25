@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useList } from '@pankod/refine-core';
-import {
-  Typography,
-  Box,
+import { 
+  Typography, 
+  Box, 
   Container,
   Tabs,
   Tab,
@@ -35,7 +35,7 @@ interface Highlight {
     _id: string;
     category: string;
   };
-  images: string[];
+  images:string[];
   seq: number;
 }
 
@@ -48,18 +48,6 @@ interface PressRelease {
   image: string[];
   seq: number;
 }
-
-interface StatusOption {
-  value: string;
-  label: string;
-}
-
-const STATUS_OPTIONS: StatusOption[] = [
-  { value: 'all', label: 'All Status' },
-  { value: 'published', label: 'Published' },
-  { value: 'draft', label: 'Draft' },
-  { value: 'rejected', label: 'Rejected' }
-];
 
 const TabPanel = (props: TabPanelProps) => {
   const { children, value, index, ...other } = props;
@@ -81,9 +69,9 @@ const TabPanel = (props: TabPanelProps) => {
 const Home = () => {
   const [tabValue, setTabValue] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const navigate = useNavigate(); // Initialize useNavigate
 
+  
   // Fetch data for both sections
   const { data: highlightsData, isLoading, error } = useList<Highlight>({
     resource: "highlights",
@@ -94,9 +82,8 @@ const Home = () => {
   });
 
   const processedHighlights = highlightsData?.data.filter(highlight => {
-    const categoryMatch = selectedCategory === 'all' || highlight.category?._id === selectedCategory;
-    const statusMatch = selectedStatus === 'all' || highlight.status === selectedStatus;
-    return categoryMatch && statusMatch;
+    if (selectedCategory === 'all') return true;
+    return highlight.category?._id === selectedCategory;
   });
 
   // Add this query for press releases
@@ -117,10 +104,6 @@ const Home = () => {
     setSelectedCategory(event.target.value);
   };
 
-  const handleStatusChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSelectedStatus(event.target.value);
-  };
-
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
@@ -136,9 +119,9 @@ const Home = () => {
 
   return (
     <Box>
-      <Typography
-        fontSize={25}
-        fontWeight={700}
+      <Typography 
+        fontSize={25} 
+        fontWeight={700} 
         sx={{ mb: 3 }}
       >
         Dashboard
@@ -146,12 +129,12 @@ const Home = () => {
 
       <Paper elevation={3}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs
-            value={tabValue}
+          <Tabs 
+            value={tabValue} 
             onChange={handleTabChange}
-            sx={{
+            sx={{ 
               px: 2,
-              '& .MuiTab-root': {
+              '& .MuiTab-root': { 
                 fontSize: '1rem',
                 fontWeight: 600,
                 textTransform: 'none'
@@ -166,7 +149,7 @@ const Home = () => {
         <TabPanel value={tabValue} index={0}>
 
           {/* Category Filter */}
-          <Box sx={{ mb: 2, gap: 2, display: 'flex', flexDirection: 'row' }}>
+          <Box sx={{ mb: 2 }}>
             <TextField
               select
               size="small"
@@ -181,44 +164,31 @@ const Home = () => {
                 </MenuItem>
               ))}
             </TextField>
-            <TextField
-              select
-              size="small"
-              label="Filter by Status"
-              value={selectedStatus}
-              onChange={handleStatusChange}
-            >
-              {STATUS_OPTIONS.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </TextField>
           </Box>
-
+          
           <Grid container spacing={3}>
             {processedHighlights?.map((highlight: any) => (
               <Grid item key={highlight._id} xs={12} sm={6} md={4}>
-                <HighlightsCard
-                  highlight={highlight}
-                  onView={() => handleView(highlight._id)} />
+                <HighlightsCard 
+                highlight={highlight}
+                onView={() => handleView(highlight._id)} />
               </Grid>
             ))}
           </Grid>
-        </TabPanel>
+      </TabPanel>
 
-        <TabPanel value={tabValue} index={1}>
-          <Grid container spacing={3}>
-            {pressReleasesData?.data.map((pressRelease: PressRelease) => (
-              <Grid item key={pressRelease._id} xs={12} sm={6} md={4}>
-                <PressReleaseCard
-                  pressRelease={pressRelease}
-                  onView={() => handlePressReleaseView(pressRelease._id)}
-                />
-              </Grid>
-            ))}
-          </Grid>
-        </TabPanel>
+      <TabPanel value={tabValue} index={1}>
+        <Grid container spacing={3}>
+          {pressReleasesData?.data.map((pressRelease: PressRelease) => (
+            <Grid item key={pressRelease._id} xs={12} sm={6} md={4}>
+              <PressReleaseCard 
+                pressRelease={pressRelease}
+                onView={() => handlePressReleaseView(pressRelease._id)}
+              />
+            </Grid>
+          ))}
+        </Grid>
+      </TabPanel>
       </Paper>
     </Box>
   );
