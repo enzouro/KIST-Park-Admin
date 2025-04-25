@@ -365,21 +365,22 @@ export const Sider: typeof DefaultSider = ({ render }) => {
           display: 'flex',
         }}
       >
-        <Drawer
-          variant="temporary"
-          open={opened}
-          onClose={() => setOpened(false)}
-          ModalProps={{
-            keepMounted: true, // Better open performance on mobile.
-          }}
-          sx={{
-            display: { sm: 'block', md: 'none' },
-            '& .MuiDrawer-paper': {
-              width: 256,
-              bgcolor: '#FCFCFC',
-            },
-          }}
-        >
+          <Drawer
+            variant="temporary"
+            open={opened}
+            onClose={() => setOpened(false)}
+            ModalProps={{
+              keepMounted: true, // Better open performance on mobile.
+            }}
+            sx={{
+              display: { sm: 'block', md: 'none' },
+              '& .MuiDrawer-paper': {
+                width: 256,
+                background: "linear-gradient(0deg, rgba(255,255,255,0) 0%, rgba(0,95,177,1) 61%, rgba(0,136,255,1) 100%)",
+                overflow: 'hidden',
+              },
+            }}
+          >
           <Box
             sx={{
               height: 64,

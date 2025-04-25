@@ -44,6 +44,13 @@ import { SessionExpired } from 'pages/session-expired';
 import Subscribers from 'pages/subscribers';
 
 
+interface Config{
+  apiUrl: string | undefined;
+}
+
+const config: Config = {
+  apiUrl: process.env.REACT_APP_API_URL || 'http://localhost:8080' // Provide a fallback URL
+}
 
 const axiosInstance = axios.create();
 axiosInstance.interceptors.request.use((request: AxiosRequestConfig) => {
@@ -107,7 +114,6 @@ const checkAuthAndTokenValidity = async () => {
         return; // Exit early if token is expired
       }
     } catch (error) {
-      console.error('Error checking token expiration:', error);
       authProvider.logout({} as any);
       window.location.href = '/login';
       return; // Exit early if token parsing fails
@@ -118,7 +124,7 @@ const checkAuthAndTokenValidity = async () => {
     if (!user) return;
     
     const parsedUser = JSON.parse(user);
-    const response = await fetch(`https://kist-park-admin.onrender.com/api/v1/users/${parsedUser.userid}`, {
+    const response = await fetch(`${config.apiUrl}/api/v1/users/${parsedUser.userid}`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -171,7 +177,7 @@ const checkAuthAndTokenValidity = async () => {
 
       // Save user to MongoDB
       if (profileObj) {
-        const response = await fetch('https://kist-park-admin.onrender.com/api/v1/users', {
+        const response = await fetch(`${config.apiUrl}/api/v1/users`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -274,7 +280,7 @@ const checkAuthAndTokenValidity = async () => {
       <GlobalStyles styles={{ html: { WebkitFontSmoothing: 'auto' } }} />
       <RefineSnackbarProvider>
         <Refine
-          dataProvider={dataProvider('https://kist-park-admin.onrender.com/api/v1', axiosInstance)}
+          dataProvider={dataProvider(`${config.apiUrl}/api/v1`, axiosInstance)}
           notificationProvider={notificationProvider}
           ReadyPage={ReadyPage}
           catchAll={<ErrorComponent />}

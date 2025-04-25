@@ -6,6 +6,15 @@ import { CredentialResponse } from 'interfaces/google';
 import {kist} from '../assets';
 import { parseJwt } from 'utils/parse-jwt';
 
+
+interface Config{
+  apiUrl: string | undefined;
+}
+
+const config: Config = {
+  apiUrl: process.env.REACT_APP_API_URL || 'http://localhost:8080' // Provide a fallback URL
+}
+
 const GoogleButton: React.FC<{ onLogin: (res: CredentialResponse) => void }> = ({ onLogin }) => {
   const divRef = useRef<HTMLDivElement>(null);
 
@@ -46,7 +55,7 @@ const GoogleButton: React.FC<{ onLogin: (res: CredentialResponse) => void }> = (
             const profileObj = JSON.parse(atob(res.credential.split('.')[1]));
             
             try {
-              const response = await axios.post('https://kist-park-admin.onrender.com/api/v1/users', {
+              const response = await axios.post(`${config.apiUrl}/api/v1/users`, {
                 name: profileObj.name,
                 email: profileObj.email,
                 avatar: profileObj.picture,
