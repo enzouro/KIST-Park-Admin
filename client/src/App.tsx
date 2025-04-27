@@ -95,61 +95,82 @@ const App = () => {
   const [isAdmin, setIsAdmin] = React.useState(false);
 
   // Consolidated authorization and token check function
-const checkAuthAndTokenValidity = async () => {
-  try {
-    // 1. First check if token exists
-    const token = localStorage.getItem('token');
-    if (!token) return;
-    
-    // 2. Check if token is expired
+  const checkAuthAndTokenValidity = async () => {
     try {
-      const decodedToken = parseJwt(token);
-      const currentTime = Date.now() / 1000;
+      // 1. First check if token exists
+      const token = localStorage.getItem('token');
+      if (!token) return;
       
-      // If token is expired, log out automatically
-      if (decodedToken.exp < currentTime) {
-        console.log("Token expired, logging out user");
+      // 2. Check if token is expired or needs renewal
+      try {
+        const decodedToken = parseJwt(token);
+        const currentTime = Date.now() / 1000;
+        
+        // If token is expired, log out automatically
+        if (decodedToken.exp < currentTime) {
+          console.log("Token expired, logging out user");
+          authProvider.logout({} as any);
+          window.location.href = '/session-expired'; // Redirect to session expired page
+          return; // Exit early if token is expired
+        }
+        
+        // Check if token needs renewal (less than 1 day left)
+        const oneDayInSeconds = 24 * 60 * 60;
+        if (decodedToken.exp - currentTime < oneDayInSeconds) {
+          console.log("Token expiring soon, refreshing token");
+          // Call token refresh endpoint
+          const refreshResponse = await fetch(`${config.apiUrl}/api/v1/auth/refresh`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (refreshResponse.ok) {
+            const refreshData = await refreshResponse.json();
+            // Update the token with new one that has ~7 day expiration
+            localStorage.setItem('token', refreshData.token);
+            console.log("Token refreshed successfully");
+          }
+        }
+      } catch (error) {
         authProvider.logout({} as any);
-        window.location.href = '/session-expired'; // Redirect to session expired page
-        return; // Exit early if token is expired
+        window.location.href = '/login';
+        return; // Exit early if token parsing fails
       }
+      
+      // 3. Now check user authorization with the server
+      const user = localStorage.getItem('user');
+      if (!user) return;
+      
+      const parsedUser = JSON.parse(user);
+      const response = await fetch(`${config.apiUrl}/api/v1/users/${parsedUser.userid}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        // If user is not found or unauthorized, trigger logout
+        authProvider.logout({} as any);
+        window.location.href = '/unauthorized';
+        return;
+      }
+  
+      const userData = await response.json();
+      if (!userData.isAllowed) {
+        // If user is explicitly not allowed, trigger logout
+        authProvider.logout({} as any);
+        window.location.href = '/unauthorized';
+        return;
+      }
+      
+      // User is authenticated and authorized - no action needed
     } catch (error) {
-      authProvider.logout({} as any);
-      window.location.href = '/login';
-      return; // Exit early if token parsing fails
+      console.error('Error checking authentication and authorization:', error);
     }
-    
-    // 3. Now check user authorization with the server
-    const user = localStorage.getItem('user');
-    if (!user) return;
-    
-    const parsedUser = JSON.parse(user);
-    const response = await fetch(`${config.apiUrl}/api/v1/users/${parsedUser.userid}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    
-    if (!response.ok) {
-      // If user is not found or unauthorized, trigger logout
-      authProvider.logout({} as any);
-      window.location.href = '/unauthorized';
-      return;
-    }
-
-    const userData = await response.json();
-    if (!userData.isAllowed) {
-      // If user is explicitly not allowed, trigger logout
-      authProvider.logout({} as any);
-      window.location.href = '/unauthorized';
-      return;
-    }
-    
-    // User is authenticated and authorized - no action needed
-  } catch (error) {
-    console.error('Error checking authentication and authorization:', error);
-  }
-};
+  };
 
   React.useEffect(() => {
     const user = localStorage.getItem('user');
