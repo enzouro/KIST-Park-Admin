@@ -272,10 +272,7 @@ const updateHighlight = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, sdg, date, location, content, images, status, seq, email, category } = req.body;
-
-        // Format date
     const formattedDate = date ? date.split('T')[0] : null;
-
 
     const updateHighlightWithTimeout = async () => {
       // Get existing highlight
@@ -284,47 +281,34 @@ const updateHighlight = async (req, res) => {
         throw new Error('Highlight not found');
       }
 
-      if (category) {
-        try {
-          if (!mongoose.Types.ObjectId.isValid(category)) {
-            throw new Error('Invalid category ID format');
-          }
-          
-          const categoryExists = await Category.findById(category); // Changed from category to Category
-          if (!categoryExists) {
-            throw new Error('Category not found');
-          }
-        } catch (error) {
-          throw new Error(`Category validation failed: ${error.message}`);
-        }
-      }
+      // Only process new images if they're different from existing ones
+      const existingImages = existingHighlight.images || [];
+      const newImages = images || [];
+      
+      // Find images that need to be deleted (exist in old but not in new)
+      const imagesToDelete = existingImages.filter(oldImage => 
+        !newImages.includes(oldImage) && oldImage.startsWith('http')
+      );
 
-      // Start parallel processes
-      const processPromises = [
-        // Process 1: Handle image deletions
-        (async () => {
-          const removedImages = existingHighlight.images.filter(
-            oldImage => !images.includes(oldImage)
-          );
-          if (removedImages.length > 0) {
-            const deletePromises = removedImages.map(imageUrl => 
-              deleteImageFromCloudinary(imageUrl)
-            );
-            await Promise.all(deletePromises);
-          }
-        })(),
+      // Find images that need to be uploaded (new base64 images)
+      const imagesToUpload = newImages.filter(img => 
+        img.startsWith('data:') && !existingImages.includes(img)
+      );
 
-        // Process 2: Handle new image processing
-        Promise.race([
-          processImages(images),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Image processing timeout')), 30000)
-          )
-        ])
-      ];
+      // Keep existing URLs that are still needed
+      const remainingImages = newImages.filter(img => 
+        !img.startsWith('data:') && existingImages.includes(img)
+      );
 
-      // Wait for all processes to complete
-      const [_, processedImages] = await Promise.all(processPromises);
+      // Process operations in parallel
+      const [processedNewImages] = await Promise.all([
+        imagesToUpload.length > 0 ? processImages(imagesToUpload) : [],
+        // Delete old images
+        Promise.all(imagesToDelete.map(imageUrl => deleteImageFromCloudinary(imageUrl)))
+      ]);
+
+      // Combine remaining and new images
+      const finalImages = [...remainingImages, ...processedNewImages];
 
       // Update highlight with new data
       const updatedHighlight = await Highlight.findByIdAndUpdate(
@@ -335,7 +319,7 @@ const updateHighlight = async (req, res) => {
           date: formattedDate,
           location,
           content,
-          images: processedImages,
+          images: finalImages,
           status,
           seq,
           email,

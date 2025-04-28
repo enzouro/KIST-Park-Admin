@@ -26,6 +26,7 @@ interface ImageUploaderProps {
   maxImages?: number;
   maxFileSize?: number; // in bytes
   acceptedFormats?: string[]; // e.g. ['jpeg', 'png', 'gif']
+  preserveExisting?: boolean;
 }
 
 const ImageUploader: React.FC<ImageUploaderProps> = ({ 
@@ -169,7 +170,6 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
       
       // Reset the file input value to allow selecting the same file again
       e.target.value = '';
-      
       // Validate file format
       const validationError = validateFile(file);
       if (validationError) {
@@ -199,6 +199,12 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
         
         // Start the upload simulation
         setIsUploading(true);
+
+        const isExistingUrl = value.some(img => img === processedImage);
+        if (isExistingUrl) {
+          setError('This image is already uploaded');
+          return;
+        }
         
         // Simulate upload progress - in a real app, this would be tied to actual upload progress
         let progress = 0;
@@ -222,6 +228,8 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
         setUploadProgress(0);
       }
     }
+    
+
   }, [value, onChange, fileToBase64, validateFile, downscaleImageIfNeeded]);
   
   // Handle image removal

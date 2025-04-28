@@ -114,26 +114,7 @@ const App = () => {
           return; // Exit early if token is expired
         }
         
-        // Check if token needs renewal (less than 1 day left)
-        const oneDayInSeconds = 24 * 60 * 60;
-        if (decodedToken.exp - currentTime < oneDayInSeconds) {
-          console.log("Token expiring soon, refreshing token");
-          // Call token refresh endpoint
-          const refreshResponse = await fetch(`${config.apiUrl}/api/v1/auth/refresh`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          });
-          
-          if (refreshResponse.ok) {
-            const refreshData = await refreshResponse.json();
-            // Update the token with new one that has ~7 day expiration
-            localStorage.setItem('token', refreshData.token);
-            console.log("Token refreshed successfully");
-          }
-        }
+
       } catch (error) {
         authProvider.logout({} as any);
         window.location.href = '/login';

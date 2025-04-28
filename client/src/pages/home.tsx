@@ -15,7 +15,6 @@ import {
 } from '@pankod/refine-mui';
 import HighlightsCard from 'components/dashboard/HighlightsCard';
 import PressReleaseCard from 'components/dashboard/PressReleaseCard';
-import { Construction } from '@mui/icons-material';
 import { MenuItem, TextField } from '@mui/material';
 import { useNavigate } from '@pankod/refine-react-router-v6';
 
