@@ -45,7 +45,6 @@ const processImages = async (images) => {
           const uploadResult = await cloudinary.uploader.upload(image, uploadOptions);
           return uploadResult.url;
         } catch (error) {
-
           return null;
         }
       }
@@ -65,27 +64,56 @@ const processImages = async (images) => {
 // Delete image from Cloudinary
 const deleteImageFromCloudinary = async (imageUrl) => {
   try {
-    // Implement a simple caching mechanism to prevent repeated deletions
-    const publicId = imageUrl.split('/').slice(-1)[0].split('.')[0];
+    // Handle case where imageUrl is an array
+    if (Array.isArray(imageUrl)) {
+
+      if (imageUrl.length === 0) return false;
+      imageUrl = imageUrl[0]; // Take the first element
+    }
+    
+    // Exit early if no image URL provided
+    if (!imageUrl || typeof imageUrl !== 'string' || !imageUrl.startsWith('http')) {
+      return false;
+    }
+    
+    // Extract the public ID from Cloudinary URL
+    // Cloudinary URLs typically look like:
+    // https://res.cloudinary.com/cloud-name/image/upload/v1234567890/folder/filename.jpg
+    
+    // Parse the URL to get the complete path after /upload/
+    const urlParts = imageUrl.split('/upload/');
+    if (urlParts.length < 2) {
+      return false;
+    }
+    
+    // Extract everything after the /upload/ part, removing version if present
+    let publicIdWithPath = urlParts[1];
+    
+    // Remove version number if present (v1234567890/)
+    publicIdWithPath = publicIdWithPath.replace(/^v\d+\//, '');
+    
+    // Remove file extension
+    publicIdWithPath = publicIdWithPath.replace(/\.[^/.]+$/, "");
+    
     
     // Use a simple in-memory cache to track deleted images
-    if (deleteImageFromCloudinary.deletedCache.has(publicId)) {
+    if (deleteImageFromCloudinary.deletedCache.has(publicIdWithPath)) {
       return true;
     }
 
-    await cloudinary.uploader.destroy(publicId);
+    // Delete the image
+    const result = await cloudinary.uploader.destroy(publicIdWithPath);
     
     // Mark as deleted in cache
-    deleteImageFromCloudinary.deletedCache.add(publicId);
-    return true;
+    deleteImageFromCloudinary.deletedCache.add(publicIdWithPath);
+    return result.result === 'ok';
   } catch (error) {
-
+    console.error('Error deleting image from Cloudinary:', error);
     return false;
   }
 };
 
 deleteImageFromCloudinary.deletedCache = new Set();
-
 
 // ------- End of Utility Functions --------------///
 // Get all press releases with filtering and pagination
@@ -119,7 +147,6 @@ const getPressReleases = async (req, res) => {
 
     res.status(200).json(pressReleases);
   } catch (err) {
-
     res.status(500).json({ message: 'Fetching press releases failed, please try again later' });
   }
 };
@@ -147,13 +174,11 @@ const getPressReleaseById = async (req, res) => {
       res.status(404).json({ message: 'Press release not found' });
     }
   } catch (err) {
-
     res.status(500).json({ message: 'Failed to get press release details' });
   }
 };
 
 // Create a new press release
-// Update the createPressRelease function
 const createPressRelease = async (req, res) => {
   try {
     const {
@@ -208,13 +233,13 @@ const createPressRelease = async (req, res) => {
       pressRelease
     });
   } catch (err) {
-
     res.status(500).json({ 
       message: 'Failed to create press release', 
       error: err.message 
     });
   }
 };
+
 
 // Update a press release
 const updatePressRelease = async (req, res) => {
@@ -228,9 +253,21 @@ const updatePressRelease = async (req, res) => {
     }
 
     let processedImage = existingPressRelease.image;
+    
+    // Handle image replacement
     if (image && image !== existingPressRelease.image) {
-      const processedImages = await processImages([image]);
-      processedImage = processedImages[0] || existingPressRelease.image;
+      // First delete the old image from Cloudinary if it exists
+      if (existingPressRelease.image) {
+        await deleteImageFromCloudinary(existingPressRelease.image);
+      }
+      
+      // Process and upload the new image
+      if (typeof image === 'string' && image.startsWith('data:')) {
+        const processedImages = await processImages([image]);
+        processedImage = processedImages[0] || existingPressRelease.image;
+      } else {
+        processedImage = image; // Keep the URL if it's already an URL
+      }
     }
 
     const updatedPressRelease = await PressRelease.findByIdAndUpdate(
@@ -251,7 +288,7 @@ const updatePressRelease = async (req, res) => {
       pressRelease: updatedPressRelease
     });
   } catch (err) {
-
+    console.error('Error updating press release:', err);
     res.status(500).json({ 
       message: 'Failed to update press release',
       error: err.message 
@@ -268,19 +305,27 @@ const deletePressRelease = async (req, res) => {
     if (id.includes(',')) {
       const ids = id.split(',');
       
-      // Validate that all IDs exist
-      const existingPressReleases = await PressRelease.find({ _id: { $in: ids } });
-      if (existingPressReleases.length !== ids.length) {
+      // Find all press releases to get their images before deletion
+      const pressReleasesToDelete = await PressRelease.find({ _id: { $in: ids } });
+      
+      if (pressReleasesToDelete.length === 0) {
         return res.status(404).json({ 
-          message: 'One or more press releases not found' 
+          message: 'No press releases found to delete' 
         });
+      }
+      
+      // Delete all images from Cloudinary
+      for (const pr of pressReleasesToDelete) {
+        if (pr.image) {
+          await deleteImageFromCloudinary(pr.image);
+        }
       }
       
       // Delete all press releases in the list
       await PressRelease.deleteMany({ _id: { $in: ids } });
       
       return res.status(200).json({
-        message: `${ids.length} press releases deleted successfully`
+        message: `${pressReleasesToDelete.length} press releases deleted successfully`
       });
     } 
     // Single ID deletion
@@ -290,6 +335,12 @@ const deletePressRelease = async (req, res) => {
         return res.status(404).json({ message: 'Press release not found' });
       }
       
+      // Delete the image from Cloudinary if it exists
+      if (pressReleaseToDelete.image) {
+        await deleteImageFromCloudinary(pressReleaseToDelete.image);
+      }
+      
+      // Delete the press release from MongoDB
       await PressRelease.findByIdAndDelete(id);
       
       return res.status(200).json({ 
@@ -297,9 +348,10 @@ const deletePressRelease = async (req, res) => {
       });
     }
   } catch (err) {
-
+    console.error('Error deleting press release:', err);
     res.status(500).json({ 
-      message: 'Failed to delete press release' 
+      message: 'Failed to delete press release',
+      error: err.message 
     });
   }
 };

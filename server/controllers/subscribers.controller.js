@@ -64,25 +64,57 @@ const deleteSubscriber = async (req, res) => {
     
     // Handle comma-separated IDs for multiple deletions
     const ids = id.split(',');
+    const deletionResults = [];
     
     for (const singleId of ids) {
-      const subscriberToDelete = await Subscriber.findById(singleId);
-      
-      if (!subscriberToDelete) {
-        continue; // Skip to next ID if this one isn't found
-      }
+      try {
+        const subscriberToDelete = await Subscriber.findById(singleId);
+        
+        if (!subscriberToDelete) {
+          deletionResults.push({
+            id: singleId,
+            success: false,
+            message: 'Subscriber not found'
+          });
+          continue;
+        }
 
-      // Delete the subscriber from MongoDB
-      await Subscriber.findByIdAndDelete(singleId);
+        // Delete the subscriber
+        await Subscriber.findByIdAndDelete(singleId);
+        deletionResults.push({
+          id: singleId,
+          success: true,
+          message: 'Successfully deleted'
+        });
+      } catch (err) {
+        deletionResults.push({
+          id: singleId,
+          success: false,
+          message: 'Failed to delete'
+        });
+      }
     }
 
-    res.status(200).json({ 
-      message: `Successfully deleted ${ids.length} ${ids.length === 1 ? 'subscriber' : 'subscribers'}` 
+    // Check if any deletions were successful
+    const successfulDeletions = deletionResults.filter(result => result.success);
+    
+    if (successfulDeletions.length === 0) {
+      return res.status(404).json({
+        message: 'No subscribers were deleted',
+        results: deletionResults
+      });
+    }
+
+    return res.status(200).json({
+      message: `Successfully deleted ${successfulDeletions.length} ${successfulDeletions.length === 1 ? 'subscriber' : 'subscribers'}`,
+      results: deletionResults
     });
+
   } catch (err) {
     console.error('Delete error:', err);
-    res.status(500).json({ 
-      message: 'Failed to delete one or more subscribers' 
+    return res.status(500).json({
+      message: 'Server error while deleting subscribers',
+      error: err.message
     });
   }
 };

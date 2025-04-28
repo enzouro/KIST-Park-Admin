@@ -9,7 +9,7 @@ const router = express.Router();
 
 router.get('/', getAllSubscribers);
 router.post('/', createSubscriber);
-router.post('/:id', deleteSubscriber); 
+router.delete('/:id', deleteSubscriber); 
 
 export default router;
 // server\routes\subscribers.routes.js
