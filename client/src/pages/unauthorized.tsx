@@ -20,7 +20,7 @@ export const UnauthorizedPage: React.FC = () => {
         Authorized Personnel Only
       </Typography>
       <Typography variant="body1" gutterBottom>
-        If you're a user, please contact the admin for access.
+        If you're a <span style={{fontWeight: 700, color: '#005099'}}>'first time user'</span>, please contact the admin for access.
       </Typography>
       <Button
         variant="contained"

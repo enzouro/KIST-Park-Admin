@@ -16,17 +16,25 @@ import auth from './middleware/auth.middleware.js';
 
 dotenv.config();
 
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'];
+
 const app = express();
 
 const corsOptions = {
   origin: function (origin, callback) {
-    const allowedOrigins = ['http://localhost:3000','http://localhost:4000', 'https://kist-park-admin.netlify.app','http://127.0.0.1:4000','https://firstkistpark.com'];
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
     }
   },
+  credentials: true, // Allow credentials (cookies, authorization headers, etc.)
+  optionsSuccessStatus: 200
 };
 
 app.use(cors(corsOptions));
