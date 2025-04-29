@@ -63,18 +63,24 @@ const Subscribers = () => {
 
   const filteredRows = useMemo(() => {
     return allSubscribers.filter((subscriber) => {
+      if (!subscriber.createdAt) return false;
+      
       const subscriberDate = new Date(subscriber.createdAt);
-      const today = new Date();
-
-      // Date range filter
+      
+      // Date range filter with proper handling of date boundaries
       if (startDate && endDate) {
         const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0); // Start of day
+        
         const end = new Date(endDate);
-        end.setHours(23, 59, 59); // Include the entire end date
+        end.setHours(23, 59, 59, 999); // End of day
+        
         return subscriberDate >= start && subscriberDate <= end;
       }
       
-      // Time period filter
+      // Rest of time period filter logic remains the same
+      const today = new Date();
+      
       switch (timeFilter) {
         case 'day':
           return subscriberDate.toDateString() === today.toDateString();
@@ -92,16 +98,29 @@ const Subscribers = () => {
 
   const getExportFilename = () => {
     if (startDate && endDate) {
-      return `subscribers_${startDate}_to_${endDate}.csv`;
+      // Format dates in a more readable way
+      const formattedStartDate = new Date(startDate).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).replace(/\//g, '-');
+      
+      const formattedEndDate = new Date(endDate).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).replace(/\//g, '-');
+      
+      return `subscribers_${formattedStartDate}_to_${formattedEndDate}.csv`;
     }
     
     switch (timeFilter) {
       case 'day':
-        return `subscribers_today.csv`;
+        return `subscribers_today_${new Date().toISOString().split('T')[0]}.csv`;
       case 'week':
-        return `subscribers_thisweek.csv`;
+        return `subscribers_thisweek_${new Date().toISOString().split('T')[0]}.csv`;
       case 'month':
-        return `subscribers_thismonth.csv`;
+        return `subscribers_thismonth_${new Date().toISOString().split('T')[0]}.csv`;
       default:
         return `subscribers_all_${new Date().toISOString().split('T')[0]}.csv`;
     }
@@ -111,17 +130,38 @@ const Subscribers = () => {
     try {
       setIsExporting(true);
       
-      // Create CSV with filtered data
+      // Ensure we have data to export
+      if (filteredRows.length === 0) {
+        console.error('No data to export');
+        return;
+      }
+      
+      // Create CSV with filtered data, adding proper date formatting
       const csvData = filteredRows.map(subscriber => ({
         Sequence: subscriber.seq,
         Email: subscriber.email,
-        'Subscription Date': new Date(subscriber.createdAt).toLocaleDateString()
+        'Subscription Date': new Date(subscriber.createdAt).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        })
       }));
       
-      // Convert to CSV string
+      // Handle possible special characters in CSV properly
+      const escapeCSV = (value: string) => {
+        // If value contains comma, quote, or newline, wrap in quotes and escape any quotes
+        if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
+          return `"${value.replace(/"/g, '""')}"`;
+        }
+        return value;
+      };
+      
+      // Convert to CSV string with proper escaping
       const csvContent = [
         Object.keys(csvData[0]).join(','), // Headers
-        ...csvData.map(row => Object.values(row).join(',')) // Data rows
+        ...csvData.map(row => Object.values(row).map(escapeCSV).join(',')) // Data rows
       ].join('\n');
   
       // Create and trigger download
@@ -131,7 +171,7 @@ const Subscribers = () => {
       const link = document.createElement('a');
       link.setAttribute('href', url);
       
-      // Add filter info to filename
+      // Get filename with filter info
       const filename = getExportFilename();
       link.setAttribute('download', filename);
       
@@ -139,8 +179,12 @@ const Subscribers = () => {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+      
+      // Show success notification or feedback
+      console.log('Export completed successfully');
     } catch (error) {
       console.error('Export failed:', error);
+      // You could add error notification here
     } finally {
       setIsExporting(false);
     }
