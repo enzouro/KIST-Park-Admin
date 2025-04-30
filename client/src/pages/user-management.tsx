@@ -30,6 +30,7 @@ import CustomIconButton from 'components/common/CustomIconButton';
 import useDynamicHeight from 'hooks/useDynamicHeight';
 import LoadingDialog from 'components/common/LoadingDialog';
 import ErrorDialog from 'components/common/ErrorDialog';
+import { CustomThemeProvider } from 'utils/customThemeProvider';
 
 const UserManagement = () => {
   const { data, isLoading, isError, refetch } = useList({
@@ -225,7 +226,8 @@ const UserManagement = () => {
   }
 
   return (
-    <Paper 
+    <CustomThemeProvider>
+      <Paper 
       elevation={3} 
       sx={{     
         height: containerHeight,
@@ -235,7 +237,7 @@ const UserManagement = () => {
         overflow: 'hidden',
         borderRadius: { xs: '8px', sm: '12px' }
       }}
-    >
+      >
       <Typography
         variant={isMobile ? "h5" : "h4"}
         sx={{
@@ -378,7 +380,8 @@ const UserManagement = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Paper>
+      </Paper>
+    </CustomThemeProvider>
   );
 };
 
