@@ -24,10 +24,8 @@ import { CredentialResponse } from 'interfaces/google';
 import { parseJwt } from 'utils/parse-jwt';
 
 import {
-
   Home,
   Login,
-
   AllHighlights,
   AllPressReleases,
   EditPressRelease,
@@ -81,7 +79,7 @@ axiosInstance.interceptors.response.use(
         localStorage.removeItem('user');
         
         // Redirect to login
-        window.location.href = '/login';
+        window.location.href = '/kistadmin/login';
         return Promise.reject(error);
       } catch (err) {
         return Promise.reject(err);
@@ -110,14 +108,14 @@ const App = () => {
         if (decodedToken.exp < currentTime) {
           console.log("Token expired, logging out user");
           authProvider.logout({} as any);
-          window.location.href = '/session-expired'; // Redirect to session expired page
+          window.location.href = '/kistadmin/session-expired'; // Updated with basename
           return; // Exit early if token is expired
         }
         
 
       } catch (error) {
         authProvider.logout({} as any);
-        window.location.href = '/login';
+        window.location.href = '/kistadmin/login'; // Updated with basename
         return; // Exit early if token parsing fails
       }
       
@@ -135,7 +133,7 @@ const App = () => {
       if (!response.ok) {
         // If user is not found or unauthorized, trigger logout
         authProvider.logout({} as any);
-        window.location.href = '/unauthorized';
+        window.location.href = '/kistadmin/unauthorized'; // Updated with basename
         return;
       }
   
@@ -143,7 +141,7 @@ const App = () => {
       if (!userData.isAllowed) {
         // If user is explicitly not allowed, trigger logout
         authProvider.logout({} as any);
-        window.location.href = '/unauthorized';
+        window.location.href = '/kistadmin/unauthorized'; // Updated with basename
         return;
       }
       
@@ -273,8 +271,29 @@ const App = () => {
     },
   };
   
-
+  // For older versions of Refine, configure the router differently
+  const customRouterProvider = {
+    ...routerProvider,
+    routes: [
+      {
+        path: '/unauthorized',
+        element: <UnauthorizedPage />
+      },
+      {
+        path: '/session-expired',
+        element: <SessionExpired />
+      }
+    ]
+  };
   
+  // Add the basename option directly to the BrowserRouter
+  // This is accessed through the routerProvider.RouterComponent
+  if (routerProvider.RouterComponent) {
+    const OriginalRouterComponent = routerProvider.RouterComponent;
+    routerProvider.RouterComponent = (props: any) => (
+      <OriginalRouterComponent basename="/kistadmin" {...props} />
+    );
+  }
 
   return (
     <ColorModeContextProvider>
@@ -319,20 +338,7 @@ const App = () => {
           Sider={Sider}
           Layout={Layout}
           Header={Header}
-          routerProvider={{
-            ...routerProvider,
-            routes: [
-              {
-                path: '/unauthorized',
-                element: <UnauthorizedPage />
-              },
-              {
-                path: '/session-expired',
-                element: <SessionExpired />
-              }
-            ]
-
-          }}
+          routerProvider={customRouterProvider}
           authProvider={authProvider}
           LoginPage={Login}
           DashboardPage={Home}
@@ -343,4 +349,3 @@ const App = () => {
 };
 
 export default App;
-

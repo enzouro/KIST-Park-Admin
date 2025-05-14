@@ -69,10 +69,10 @@ const GoogleButton: React.FC<{ onLogin: (res: CredentialResponse) => void }> = (
                 localStorage.setItem('token', res.credential);
                 onLogin(res);
               } else {
-                window.location.href = '/unauthorized';
+                window.location.href = '/kistadmin/unauthorized';
               }
             } catch (error) {
-              window.location.href = '/unauthorized';
+              window.location.href = '/kistadmin/unauthorized';
             }
           }
         }
