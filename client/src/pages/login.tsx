@@ -1,26 +1,33 @@
 import { useEffect, useRef } from 'react';
 import { useLogin } from '@pankod/refine-core';
 import { Container, Box } from '@pankod/refine-mui';
-import axios from 'axios'; // Import axios for API requests
+import axios from 'axios';
 import { CredentialResponse } from 'interfaces/google';
-import {kist} from '../assets';
+import { kist } from '../assets';
 import { parseJwt } from 'utils/parse-jwt';
 
+// Define the basename constant for reuse
+const BASENAME = '/kistadmin';
 
-interface Config{
+interface Config {
   apiUrl: string | undefined;
 }
 
 const config: Config = {
-  apiUrl: process.env.REACT_APP_API_URL || 'http://localhost:8080' // Provide a fallback URL
+  apiUrl: process.env.REACT_APP_API_URL || 'http://localhost:8080'
 }
+
+// Helper function for consistent path building
+const buildPath = (path: string): string => {
+  return `${BASENAME}${path}`;
+};
 
 const GoogleButton: React.FC<{ onLogin: (res: CredentialResponse) => void }> = ({ onLogin }) => {
   const divRef = useRef<HTMLDivElement>(null);
 
-
   useEffect(() => {
-    // Check token validity at login page load
+    // Don't perform automatic redirects on the login page itself
+    // Only check if we have a valid token and let the router handle any redirects
     const token = localStorage.getItem('token');
     if (token) {
       try {
@@ -31,6 +38,9 @@ const GoogleButton: React.FC<{ onLogin: (res: CredentialResponse) => void }> = (
           // Token is expired, clear it
           localStorage.removeItem('token');
           localStorage.removeItem('user');
+        } else {
+          // If token is valid, let Refine handle the navigation
+          // Don't redirect here
         }
       } catch (error) {
         // Invalid token, clear it
@@ -49,7 +59,7 @@ const GoogleButton: React.FC<{ onLogin: (res: CredentialResponse) => void }> = (
       window.google.accounts.id.initialize({
         ux_mode: 'popup',
         client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
-        redirect_uri:'urn:ietf:wg:oauth:2.0:oob',
+        redirect_uri: 'urn:ietf:wg:oauth:2.0:oob',
         callback: async (res: CredentialResponse) => {
           if (res.credential) {
             const profileObj = JSON.parse(atob(res.credential.split('.')[1]));
@@ -69,10 +79,16 @@ const GoogleButton: React.FC<{ onLogin: (res: CredentialResponse) => void }> = (
                 localStorage.setItem('token', res.credential);
                 onLogin(res);
               } else {
-                window.location.href = '/kistadmin/unauthorized';
+                // Let the router handle unauthorized redirects
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                onLogin(res); // Let Refine handle this, which will trigger unauthorized
               }
             } catch (error) {
-              window.location.href = '/kistadmin/unauthorized';
+              // Let the router handle unauthorized redirects
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+              onLogin(res); // Let Refine handle this, which will trigger unauthorized
             }
           }
         }
@@ -83,7 +99,7 @@ const GoogleButton: React.FC<{ onLogin: (res: CredentialResponse) => void }> = (
         type: 'standard',
       });
     } catch (error) {
-      window.location.href = '/login';
+      window.location.href = buildPath('/login');
     }
   }, [onLogin]);
 

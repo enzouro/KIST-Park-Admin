@@ -46,6 +46,9 @@ interface Config{
   apiUrl: string | undefined;
 }
 
+// Define the basename once to use it throughout the application
+const BASENAME = '/kistadmin';
+
 const config: Config = {
   apiUrl: process.env.REACT_APP_API_URL || 'http://localhost:8080' // Provide a fallback URL
 }
@@ -78,8 +81,7 @@ axiosInstance.interceptors.response.use(
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         
-        // Redirect to login
-        window.location.href = '/kistadmin/login';
+        // Let Refine handle the redirect
         return Promise.reject(error);
       } catch (err) {
         return Promise.reject(err);
@@ -88,6 +90,11 @@ axiosInstance.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// Helper function to build paths with the basename
+const buildPath = (path: string): string => {
+  return `${BASENAME}${path}`;
+};
 
 const App = () => {
   const [isAdmin, setIsAdmin] = React.useState(false);
@@ -108,14 +115,12 @@ const App = () => {
         if (decodedToken.exp < currentTime) {
           console.log("Token expired, logging out user");
           authProvider.logout({} as any);
-          window.location.href = '/kistadmin/session-expired'; // Updated with basename
+          window.location.href = buildPath('/session-expired');
           return; // Exit early if token is expired
         }
-        
-
       } catch (error) {
         authProvider.logout({} as any);
-        window.location.href = '/kistadmin/login'; // Updated with basename
+        window.location.href = buildPath('/login');
         return; // Exit early if token parsing fails
       }
       
@@ -133,7 +138,7 @@ const App = () => {
       if (!response.ok) {
         // If user is not found or unauthorized, trigger logout
         authProvider.logout({} as any);
-        window.location.href = '/kistadmin/unauthorized'; // Updated with basename
+        window.location.href = buildPath('/unauthorized');
         return;
       }
   
@@ -141,7 +146,7 @@ const App = () => {
       if (!userData.isAllowed) {
         // If user is explicitly not allowed, trigger logout
         authProvider.logout({} as any);
-        window.location.href = '/kistadmin/unauthorized'; // Updated with basename
+        window.location.href = buildPath('/unauthorized');
         return;
       }
       
@@ -189,9 +194,12 @@ const App = () => {
 
         const data = await response.json();
 
-        if (response.status === 200) {
+         if (response.status === 200) {
           if (!data.isAllowed) {
-            // Prevent login if user is not allowed
+            // Redirect to unauthorized page for not allowed users
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = buildPath('/unauthorized');
             return Promise.reject(new Error('User is not allowed to access the system'));
           }
           
@@ -206,6 +214,7 @@ const App = () => {
           );
           setIsAdmin(data.isAdmin); // Set isAdmin after login
         } else {
+          // Use Refine's navigation system - no direct redirects
           return Promise.reject();
         }
       }
@@ -223,6 +232,7 @@ const App = () => {
         window.google?.accounts.id.revoke(token, () => Promise.resolve());
       }
 
+      // Let Refine handle the redirect to login
       return Promise.resolve();
     },
     checkError: (error) => {
@@ -238,6 +248,7 @@ const App = () => {
       const token = localStorage.getItem('token');
     
       if (!token) {
+        // Don't redirect here - let Refine handle the redirect to login
         return Promise.reject();
       }
     
@@ -247,15 +258,16 @@ const App = () => {
         const currentTime = Date.now() / 1000;
         
         if (decodedToken.exp < currentTime) {
-          // Token expired, clear storage and reject
+          // Token expired, clear storage but don't redirect here
           localStorage.removeItem('token');
           localStorage.removeItem('user');
+          // Use Refine's navigation to handle this correctly
           return Promise.reject(new Error('Token expired'));
         }
         
         return Promise.resolve();
       } catch (error) {
-        // Token parse error
+        // Token parse error, don't redirect here
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         return Promise.reject(error);
@@ -271,9 +283,14 @@ const App = () => {
     },
   };
   
-  // For older versions of Refine, configure the router differently
+  // Configure router provider properly
   const customRouterProvider = {
     ...routerProvider,
+    RouterComponent: (props: any) => {
+      const OriginalRouterComponent = routerProvider.RouterComponent;
+      return <OriginalRouterComponent basename={BASENAME} {...props} />;
+    },
+    // Let Refine handle these routes
     routes: [
       {
         path: '/unauthorized',
@@ -285,15 +302,6 @@ const App = () => {
       }
     ]
   };
-  
-  // Add the basename option directly to the BrowserRouter
-  // This is accessed through the routerProvider.RouterComponent
-  if (routerProvider.RouterComponent) {
-    const OriginalRouterComponent = routerProvider.RouterComponent;
-    routerProvider.RouterComponent = (props: any) => (
-      <OriginalRouterComponent basename="/kistadmin" {...props} />
-    );
-  }
 
   return (
     <ColorModeContextProvider>
