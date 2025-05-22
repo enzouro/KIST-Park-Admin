@@ -1,6 +1,6 @@
 {
   "rewrites": [
-    { "source": "/kistadmin/*", "destination": "/index.html" },
+    { "source": "/firstkistpark/*", "destination": "/index.html" },
     { "source": "/*", "destination": "/index.html" }
   ]
 }

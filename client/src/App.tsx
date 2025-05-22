@@ -47,7 +47,7 @@ interface Config{
 }
 
 // Define the basename once to use it throughout the application
-const BASENAME = '/kistadmin';
+const BASENAME = '/firstkistpark';
 
 const config: Config = {
   apiUrl: process.env.REACT_APP_API_URL || 'http://localhost:8080' // Provide a fallback URL
@@ -72,7 +72,7 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
-    // If error is 401 (Unauthorized) and we haven't tried refreshing yet
+    // If error is 401 (7) and we haven't tried refreshing yet
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       

@@ -7,7 +7,7 @@ import { kist } from '../assets';
 import { parseJwt } from 'utils/parse-jwt';
 
 // Define the basename constant for reuse
-const BASENAME = '/kistadmin';
+const BASENAME = '/firstkistpark';
 
 interface Config {
   apiUrl: string | undefined;
