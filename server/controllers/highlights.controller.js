@@ -10,13 +10,18 @@ import Category from '../mongodb/models/category.js'; // Add this import
 
 dotenv.config();
 
+// Enhanced Cloudinary configuration with proxy support
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
+  // Proxy configuration - will be ignored if not needed (like on Render)
+  proxy: process.env.HTTP_PROXY || process.env.HTTPS_PROXY || undefined,
+  // Additional network configurations for better reliability
+  timeout: 60000, // 60 seconds timeout
+  // Enable secure connections
+  secure: true,
 });
-
-
 
 // ---------  Utility Functions -------------------//
 

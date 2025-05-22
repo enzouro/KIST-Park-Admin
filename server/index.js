@@ -16,7 +16,7 @@ import auth from './middleware/auth.middleware.js';
 
 dotenv.config();
 
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'];
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['https://steerhub.batstateu.edu.ph/firstkistpark'];
 
 const app = express();
 
@@ -71,7 +71,7 @@ app.use('/api/v1/subscribers', subscribersRouter);
 const startServer = async () => {
   try {
     connectDB(process.env.MONGODB_URL);
-    app.listen(8080);
+    app.listen(8083);
   } catch (error) {
     console.log(error);
   }
