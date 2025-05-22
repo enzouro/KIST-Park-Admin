@@ -17,8 +17,6 @@ cloudinary.config({
   timeout: 60000, // 60 seconds timeout
   // Enable secure connections
   secure: true,
-  // Optional: Add retry configuration
-  upload_preset: process.env.CLOUDINARY_UPLOAD_PRESET || undefined,
 });
 
 // ---------  Utility Functions -------------------//
