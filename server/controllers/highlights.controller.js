@@ -5,8 +5,7 @@ import { v2 as cloudinary } from 'cloudinary';
 import mongoose from 'mongoose';
 
 import Highlight from '../mongodb/models/highlights.js';
-import Category from '../mongodb/models/category.js'; // Add this import
-
+import Category from '../mongodb/models/category.js';
 
 dotenv.config();
 
@@ -15,94 +14,112 @@ cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
-  // Proxy configuration - will be ignored if not needed (like on Render)
-  proxy: process.env.HTTP_PROXY || process.env.HTTPS_PROXY || undefined,
-  // Additional network configurations for better reliability
-  timeout: 60000, // 60 seconds timeout
-  // Enable secure connections
+  // Add these for better network handling
   secure: true,
+  timeout: 120000, // 2 minutes
 });
 
 // ---------  Utility Functions -------------------//
-
 
 // Image processing and uploading to Cloudinary
 const processImages = async (images) => {
   if (!images || !images.length) return [];
   
-  // Improved upload options
   const uploadOptions = {
     resource_type: "auto",
-    quality: "auto:low",  // Lower quality for faster uploads
+    quality: "auto:good",
     fetch_format: "auto", 
     transformation: [
-      { width: 1024, crop: "limit" }, // Resize large images
-      { quality: "auto:low" } // Compress images
+      { width: 1200, crop: "limit" },
+      { quality: "auto:good" }
     ],
-    timeout: 60000, // Reduced timeout
-    max_results: 10 // Limit concurrent uploads
+    timeout: 120000, // 2 minutes timeout
+    chunk_size: 6000000, // 6MB chunks
+    use_filename: true,
+    unique_filename: true,
+    overwrite: false,
   };
 
-  // Use a rate-limited, concurrent upload strategy
-  const uploadPromises = images.slice(0, 5).map(async (image) => {
+  const uploadPromises = images.slice(0, 10).map(async (image, index) => {
     if (image && typeof image === 'string') {
       if (image.startsWith('data:')) {
         try {
           // Check image size before processing
           const base64Size = image.length * (3/4);
-          if (base64Size > 10 * 1024 * 1024) { // 10MB limit
+          if (base64Size > 15 * 1024 * 1024) { // 15MB limit
+            console.warn(`Image ${index} too large: ${base64Size} bytes`);
             return null;
           }
 
+          console.log(`Starting upload for image ${index}`);
           const uploadResult = await cloudinary.uploader.upload(image, uploadOptions);
+          console.log(`Upload successful for image ${index}:`, uploadResult.url);
           return uploadResult.url;
         } catch (error) {
+          console.error(`Upload failed for image ${index}:`, error.message);
           return null;
         }
       }
-      return image;
+      return image; // Return existing URL
     }
     return null;
   });
   
-  // Use Promise.allSettled for more robust handling
-  const results = await Promise.allSettled(uploadPromises);
-  
-  return results
-    .filter(result => result.status === 'fulfilled' && result.value)
-    .map(result => result.value);
+  try {
+    const results = await Promise.allSettled(uploadPromises);
+    const successfulUploads = results
+      .filter(result => result.status === 'fulfilled' && result.value)
+      .map(result => result.value);
+    
+    console.log(`Successfully processed ${successfulUploads.length} out of ${images.length} images`);
+    return successfulUploads;
+  } catch (error) {
+    console.error('Error in processImages:', error);
+    return [];
+  }
 };
 
 // Delete image from Cloudinary
 const deleteImageFromCloudinary = async (imageUrl) => {
   try {
-    // Implement a simple caching mechanism to prevent repeated deletions
-    const publicId = imageUrl.split('/').slice(-1)[0].split('.')[0];
+    if (!imageUrl || typeof imageUrl !== 'string' || !imageUrl.startsWith('http')) {
+      return false;
+    }
     
-    // Use a simple in-memory cache to track deleted images
-    if (deleteImageFromCloudinary.deletedCache.has(publicId)) {
+    // Extract the public ID from Cloudinary URL
+    const urlParts = imageUrl.split('/upload/');
+    if (urlParts.length < 2) {
+      return false;
+    }
+    
+    let publicIdWithPath = urlParts[1];
+    publicIdWithPath = publicIdWithPath.replace(/^v\d+\//, '');
+    publicIdWithPath = publicIdWithPath.replace(/\.[^/.]+$/, "");
+    
+    // Use cache to prevent duplicate deletions
+    if (deleteImageFromCloudinary.deletedCache.has(publicIdWithPath)) {
       return true;
     }
 
-    await cloudinary.uploader.destroy(publicId);
+    // Delete with timeout
+    const deletePromise = cloudinary.uploader.destroy(publicIdWithPath);
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Delete timeout')), 30000)
+    );
     
-    // Mark as deleted in cache
-    deleteImageFromCloudinary.deletedCache.add(publicId);
-    return true;
+    const result = await Promise.race([deletePromise, timeoutPromise]);
+    
+    deleteImageFromCloudinary.deletedCache.add(publicIdWithPath);
+    return result.result === 'ok';
   } catch (error) {
-
+    console.error('Error deleting image from Cloudinary:', error);
     return false;
   }
 };
 
 deleteImageFromCloudinary.deletedCache = new Set();
 
-
-
-
-
 // --------- End of Utility Functions -------------------//
-
 
 // Get all highlights with filtering and pagination
 const getHighlights = async (req, res) => {
@@ -125,26 +142,24 @@ const getHighlights = async (req, res) => {
 
     const highlights = await Highlight
       .find(query)
-      .select('_id seq title sdg date location status createdAt category images') // Include seq in selection
-      .populate('category', 'category') // Only get the category name
+      .select('_id seq title sdg date location status createdAt category images')
+      .populate('category', 'category')
       .populate('sdg')
       .limit(_end ? parseInt(_end, 10) : undefined)
       .skip(_start ? parseInt(_start, 10) : 0)
       .sort(_sort ? { [_sort]: _order } : { createdAt: -1 });
-      
 
     res.header('x-total-count', count);
     res.header('Access-Control-Expose-Headers', 'x-total-count');
 
     res.status(200).json(highlights);
   } catch (err) {
+    console.error('Error fetching highlights:', err);
     res.status(500).json({ message: 'Fetching highlights failed, please try again later' });
   }
 };
 
 // Get highlight by ID for editing
-// In getHighlightById function, replace the formattedHighlight creation with:
-
 const getHighlightById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -162,10 +177,8 @@ const getHighlightById = async (req, res) => {
       return res.status(404).json({ message: 'Highlight not found' });
     }
 
-    // Format the highlight data
     const formattedHighlight = {
       ...highlight.toObject(),
-      // Handle date strings properly
       date: highlight.date || null,
       createdAt: highlight.createdAt || null,
       category: highlight.category || null
@@ -173,176 +186,204 @@ const getHighlightById = async (req, res) => {
   
     res.status(200).json(formattedHighlight);
   } catch (err) {
+    console.error('Error getting highlight:', err);
     res.status(500).json({ message: 'Failed to get highlight details' });
   }
 };
 
-
 // Create a new highlight
 const createHighlight = async (req, res) => {
+  let createdHighlight = null;
+  
   try {
     const {
       title, sdg, date, location, content, images, status, seq, email, category
     } = req.body;
 
+    // Validate required fields
+    if (!title || !content) {
+      return res.status(400).json({ 
+        message: 'Missing required fields: title and content are required' 
+      });
+    }
+
     const formattedDate = date ? date.split('T')[0] : null;
     const today = new Date().toISOString().split('T')[0];
 
-
-    // Parallel processing with timeout
-    const createHighlightWithTimeout = async () => {
-      // Start image processing
-      const imageProcessingPromise = processImages(images);
-
-      if (category) {
-        try {
-          if (!mongoose.Types.ObjectId.isValid(category)) {
-            throw new Error('Invalid category ID format');
-          }
-          
-          const categoryExists = await Category.findById(category); // Changed from category to Category
-          if (!categoryExists) {
-            throw new Error('Category not found');
-          }
-        } catch (error) {
-          throw new Error(`Category validation failed: ${error.message}`);
-        }
-      }
-
-      // Add category validation
-  if (category) {
-    try {
+    // Validate category if provided
+    if (category) {
       if (!mongoose.Types.ObjectId.isValid(category)) {
-        throw new Error('Invalid category ID format');
+        return res.status(400).json({ message: 'Invalid category ID format' });
       }
       
       const categoryExists = await Category.findById(category);
       if (!categoryExists) {
-        throw new Error('Category not found');
+        return res.status(400).json({ message: 'Category not found' });
       }
-    } catch (error) {
-      throw new Error(`Category validation failed: ${error.message}`);
     }
-  }
 
-      // Create highlight document
-      const highlightData = {
-        title,
-        sdg,
-        date: formattedDate,
-        location,
-        content,
-        status: status || 'draft',
-        seq,
-        email,
-        createdAt: today,
-        category,
-      };
-
-      // Wait for both operations with a timeout
-      const [processedImages, highlight] = await Promise.all([
-        Promise.race([
-          imageProcessingPromise,
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Image processing timeout')), 130000)
-          )
-        ]),
-        Highlight.create(highlightData)
-      ]);
-
-      // Update highlight with processed images
-      highlight.images = processedImages;
-      await highlight.save();
-
-      return highlight;
+    // Create highlight document first without images
+    const highlightData = {
+      title,
+      sdg,
+      date: formattedDate,
+      location,
+      content,
+      status: status || 'draft',
+      seq,
+      email,
+      createdAt: today,
+      category,
+      images: [], // Will be updated after processing
     };
 
-    const highlight = await createHighlightWithTimeout();
+    console.log('Creating highlight without images first...');
+    createdHighlight = await Highlight.create(highlightData);
+    console.log('Highlight created with ID:', createdHighlight._id);
+
+    // Process images if provided
+    if (images && images.length > 0) {
+      console.log(`Processing ${images.length} images...`);
+      
+      try {
+        const processedImages = await processImages(images);
+        
+        if (processedImages && processedImages.length > 0) {
+          console.log(`Successfully processed ${processedImages.length} images`);
+          createdHighlight.images = processedImages;
+          await createdHighlight.save();
+          console.log('Highlight updated with images');
+        } else {
+          console.warn('Image processing returned no results');
+        }
+      } catch (imageError) {
+        console.error('Image processing failed:', imageError);
+        // Don't fail the entire operation if image processing fails
+      }
+    }
 
     res.status(201).json({ 
       message: 'Highlight created successfully',
-      highlight
+      highlight: createdHighlight
     });
+
   } catch (err) {
-    res.status(500).json({ 
-      message: 'Failed to create highlight', 
-      error: err.message 
-    });
+    console.error('Error creating highlight:', err);
+    
+    // If highlight was created but image processing failed, 
+    // still return success but with a warning
+    if (createdHighlight) {
+      res.status(201).json({ 
+        message: 'Highlight created successfully (image processing may have failed)',
+        highlight: createdHighlight,
+        warning: 'Some images may not have been processed correctly'
+      });
+    } else {
+      res.status(500).json({ 
+        message: 'Failed to create highlight', 
+        error: err.message 
+      });
+    }
   }
 };
-
 
 // Update a highlight
 const updateHighlight = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, sdg, date, location, content, images, status, seq, email, category } = req.body;
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid highlight ID format' });
+    }
+
     const formattedDate = date ? date.split('T')[0] : null;
 
-    const updateHighlightWithTimeout = async () => {
-      // Get existing highlight
-      const existingHighlight = await Highlight.findById(id);
-      if (!existingHighlight) {
-        throw new Error('Highlight not found');
+    // Get existing highlight
+    const existingHighlight = await Highlight.findById(id);
+    if (!existingHighlight) {
+      return res.status(404).json({ message: 'Highlight not found' });
+    }
+
+    // Validate category if provided
+    if (category && category !== existingHighlight.category?.toString()) {
+      if (!mongoose.Types.ObjectId.isValid(category)) {
+        return res.status(400).json({ message: 'Invalid category ID format' });
       }
-
-      // Only process new images if they're different from existing ones
-      const existingImages = existingHighlight.images || [];
-      const newImages = images || [];
       
-      // Find images that need to be deleted (exist in old but not in new)
-      const imagesToDelete = existingImages.filter(oldImage => 
-        !newImages.includes(oldImage) && oldImage.startsWith('http')
-      );
+      const categoryExists = await Category.findById(category);
+      if (!categoryExists) {
+        return res.status(400).json({ message: 'Category not found' });
+      }
+    }
 
-      // Find images that need to be uploaded (new base64 images)
-      const imagesToUpload = newImages.filter(img => 
-        img.startsWith('data:') && !existingImages.includes(img)
-      );
+    const existingImages = existingHighlight.images || [];
+    const newImages = images || [];
+    
+    // Find images that need to be deleted (exist in old but not in new)
+    const imagesToDelete = existingImages.filter(oldImage => 
+      !newImages.includes(oldImage) && oldImage.startsWith('http')
+    );
 
-      // Keep existing URLs that are still needed
-      const remainingImages = newImages.filter(img => 
-        !img.startsWith('data:') && existingImages.includes(img)
-      );
+    // Find images that need to be uploaded (new base64 images)
+    const imagesToUpload = newImages.filter(img => 
+      img.startsWith('data:')
+    );
 
-      // Process operations in parallel
-      const [processedNewImages] = await Promise.all([
-        imagesToUpload.length > 0 ? processImages(imagesToUpload) : [],
-        // Delete old images
-        Promise.all(imagesToDelete.map(imageUrl => deleteImageFromCloudinary(imageUrl)))
-      ]);
+    // Keep existing URLs that are still needed
+    const remainingImages = newImages.filter(img => 
+      !img.startsWith('data:') && existingImages.includes(img)
+    );
 
-      // Combine remaining and new images
-      const finalImages = [...remainingImages, ...processedNewImages];
+    let finalImages = [...remainingImages];
 
-      // Update highlight with new data
-      const updatedHighlight = await Highlight.findByIdAndUpdate(
-        id,
-        {
-          title,
-          sdg,
-          date: formattedDate,
-          location,
-          content,
-          images: finalImages,
-          status,
-          seq,
-          email,
-          category
-        },
-        { new: true }
-      ).populate('category');
+    // Process new images if any
+    if (imagesToUpload.length > 0) {
+      console.log(`Processing ${imagesToUpload.length} new images...`);
+      
+      try {
+        const processedNewImages = await processImages(imagesToUpload);
+        if (processedNewImages && processedNewImages.length > 0) {
+          finalImages = [...finalImages, ...processedNewImages];
+          console.log(`Successfully processed ${processedNewImages.length} new images`);
+        }
+      } catch (imageError) {
+        console.error('Error processing new images:', imageError);
+        // Continue with update even if image processing fails
+      }
+    }
 
-      return updatedHighlight;
-    };
+    // Delete old images asynchronously (don't wait for completion)
+    if (imagesToDelete.length > 0) {
+      console.log(`Deleting ${imagesToDelete.length} old images...`);
+      Promise.allSettled(imagesToDelete.map(imageUrl => deleteImageFromCloudinary(imageUrl)))
+        .catch(err => console.error('Error deleting old images:', err));
+    }
 
-    const updatedHighlight = await updateHighlightWithTimeout();
+    // Update highlight
+    const updatedHighlight = await Highlight.findByIdAndUpdate(
+      id,
+      {
+        title,
+        sdg,
+        date: formattedDate,
+        location,
+        content,
+        images: finalImages,
+        status,
+        seq,
+        email,
+        category
+      },
+      { new: true }
+    ).populate('category');
 
     res.status(200).json({
       message: 'Highlight updated successfully',
       highlight: updatedHighlight
     });
   } catch (err) {
+    console.error('Error updating highlight:', err);
     res.status(500).json({ 
       message: 'Failed to update highlight',
       error: err.message 
@@ -350,70 +391,69 @@ const updateHighlight = async (req, res) => {
   }
 };
 
-
 // Delete a highlight
 const deleteHighlight = async (req, res) => {
   try {
     const { id } = req.params;
     
     // Handle comma-separated IDs for multiple deletions
-    const ids = id.split(',');
+    const ids = id.split(',').filter(Boolean);
     
-    for (const singleId of ids) {
-      const highlightToDelete = await Highlight.findById(singleId);
-      
-      if (!highlightToDelete) {
-        continue; // Skip to next ID if this one isn't found
-      }
+    const highlightsToDelete = await Highlight.find({ _id: { $in: ids } });
+    
+    if (highlightsToDelete.length === 0) {
+      return res.status(404).json({ message: 'No highlights found to delete' });
+    }
 
-      // Delete images from Cloudinary if they exist
-      if (highlightToDelete.images && highlightToDelete.images.length > 0) {
-        const deletePromises = highlightToDelete.images.map(imageUrl => 
-          deleteImageFromCloudinary(imageUrl)
-        );
-        
-        // Use Promise.allSettled to handle partial failures
-        const results = await Promise.allSettled(deletePromises);
-        const failures = results.filter(r => r.status === 'rejected');
-        
-        if (failures.length > 0) {
-          res.status(500).json({
-            message: `Failed to delete some images for highlight ${singleId}`,
-          });
-        }
+    // Collect all images that need to be deleted
+    const imagesToDelete = [];
+    highlightsToDelete.forEach(highlight => {
+      if (highlight.images && highlight.images.length > 0) {
+        imagesToDelete.push(...highlight.images.filter(img => img.startsWith('http')));
       }
+    });
 
-      // Delete the highlight from MongoDB
-      await Highlight.findByIdAndDelete(singleId);
+    // Delete highlights from MongoDB first
+    const deleteResult = await Highlight.deleteMany({ _id: { $in: ids } });
+
+    // Delete images from Cloudinary asynchronously (don't wait for completion)
+    if (imagesToDelete.length > 0) {
+      console.log(`Deleting ${imagesToDelete.length} images from Cloudinary...`);
+      Promise.allSettled(imagesToDelete.map(imageUrl => deleteImageFromCloudinary(imageUrl)))
+        .catch(err => console.error('Error deleting images:', err));
     }
 
     res.status(200).json({ 
-      message: `Successfully deleted ${ids.length} ${ids.length === 1 ? 'highlight' : 'highlights'}` 
+      message: `Successfully deleted ${deleteResult.deletedCount} ${deleteResult.deletedCount === 1 ? 'highlight' : 'highlights'}` 
     });
   } catch (err) {
+    console.error('Error deleting highlights:', err);
     res.status(500).json({ 
-      message: 'Failed to delete one or more highlights' 
+      message: 'Failed to delete one or more highlights',
+      error: err.message 
     });
   }
 };
+
 const getDashboardHighlights = async (req, res) => {
   try {
     const { limit = 6 } = req.query;
 
     const highlights = await Highlight
       .find({ status: 'published' })
-      .select('_id title location status date category images') // Include images field
-      .populate('category', 'category') // Populate category field
+      .select('_id title location status date category images')
+      .populate('category', 'category')
       .sort({ date: -1 })
       .limit(parseInt(limit))
       .lean()
       .then(docs => docs.map(doc => ({
         ...doc,
-        featuredImage: doc.images?.[0]?.url || null, // Add the first image as featuredImage
+        featuredImage: doc.images?.[0] || null, // Add the first image as featuredImage
       })));
 
     res.status(200).json(highlights);
   } catch (err) {
+    console.error('Error fetching dashboard highlights:', err);
     res.status(500).json({ 
       message: 'Failed to fetch dashboard highlights' 
     });
@@ -427,4 +467,4 @@ export {
   updateHighlight,
   deleteHighlight,
   getDashboardHighlights,
-}
+};
