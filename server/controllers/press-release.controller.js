@@ -204,6 +204,10 @@ const createPressRelease = async (req, res) => {
       title, publisher, date, link, image, seq
     } = req.body;
 
+    // Debug log for incoming image
+    console.log('Received image data:', image ? 'Image present' : 'No image', 
+                image ? `(starts with: ${image.substring(0, 20)}...)` : '');
+
     // Validate required fields
     if (!title || !publisher || !date || !link) {
       return res.status(400).json({ 
@@ -227,29 +231,37 @@ const createPressRelease = async (req, res) => {
     console.log('Press release created with ID:', createdPressRelease._id);
 
     // Process image if provided
-    if (image && typeof image === 'string' && image.startsWith('data:')) {
-      console.log('Processing image...');
+    if (image) {
+      console.log('Image processing started...');
+      console.log('Image type:', typeof image);
+      console.log('Is base64?', image.startsWith('data:'));
+      console.log('Is URL?', image.startsWith('http'));
       
-      try {
-        const processedImages = await processImages([image]);
-        
-        if (processedImages && processedImages.length > 0) {
-          console.log('Image processed successfully:', processedImages[0]);
-          createdPressRelease.image = processedImages[0];
-          await createdPressRelease.save();
-          console.log('Press release updated with image');
-        } else {
-          console.warn('Image processing returned no results');
-          // Don't fail the entire operation if image processing fails
+      if (typeof image === 'string' && image.startsWith('data:')) {
+        console.log('Processing base64 image...');
+        try {
+          const processedImages = await processImages([image]);
+          console.log('processImages result:', processedImages);
+          
+          if (processedImages && processedImages.length > 0) {
+            console.log('Image processed successfully:', processedImages[0]);
+            createdPressRelease.image = processedImages[0];
+            await createdPressRelease.save();
+            console.log('Press release updated with image URL');
+          } else {
+            console.warn('Image processing returned no results');
+          }
+        } catch (imageError) {
+          console.error('Image processing failed:', imageError);
+          throw new Error(`Image processing failed: ${imageError.message}`);
         }
-      } catch (imageError) {
-        console.error('Image processing failed:', imageError);
-        // Don't fail the entire operation if image processing fails
+      } else if (typeof image === 'string' && image.startsWith('http')) {
+        console.log('Saving existing image URL...');
+        createdPressRelease.image = image;
+        await createdPressRelease.save();
+      } else {
+        console.warn('Invalid image format received:', typeof image);
       }
-    } else if (image && typeof image === 'string' && image.startsWith('http')) {
-      // If it's already a URL, just save it
-      createdPressRelease.image = image;
-      await createdPressRelease.save();
     }
 
     res.status(201).json({ 
@@ -261,12 +273,19 @@ const createPressRelease = async (req, res) => {
     console.error('Error creating press release:', err);
     
     // If press release was created but image processing failed, 
-    // still return success but with a warning
     if (createdPressRelease) {
+      // Try to update the press release with error status
+      try {
+        createdPressRelease.imageError = err.message;
+        await createdPressRelease.save();
+      } catch (saveErr) {
+        console.error('Error saving image error status:', saveErr);
+      }
+      
       res.status(201).json({ 
-        message: 'Press release created successfully (image processing may have failed)',
+        message: 'Press release created successfully (image processing failed)',
         pressRelease: createdPressRelease,
-        warning: 'Image may not have been processed correctly'
+        warning: `Image processing failed: ${err.message}`
       });
     } else {
       res.status(500).json({ 
@@ -295,45 +314,35 @@ const updatePressRelease = async (req, res) => {
     let processedImage = existingPressRelease.image;
     
       // Handle image replacement
-    if (image !== undefined && image !== existingPressRelease.image) {
-      if (image && typeof image === 'string' && image.startsWith('data:')) {
-        console.log('Processing new image for update...');
-        
-        try {
-          const processedImages = await processImages([image]);
-          
-          if (processedImages && processedImages.length > 0) {
-            console.log('New image processed successfully');
-            
-            // Delete old image if it exists and is different
-            if (existingPressRelease.image && 
-                typeof existingPressRelease.image === 'string' && 
-                existingPressRelease.image.startsWith('http')) {
-              console.log('Deleting old image...');
-              await deleteImageFromCloudinary(existingPressRelease.image);
-            }
-            
-            processedImage = processedImages[0];
-          } else {
-            console.warn('Image processing failed, keeping existing image');
-          }
-        } catch (imageError) {
-          console.error('Image processing error during update:', imageError);
-          // Keep existing image if processing fails
-        }
-      } else if (image && typeof image === 'string' && image.startsWith('http')) {
-        // If it's already a URL, use it
-        processedImage = image;
-      } else if (image === null || image === '') {
-        // If explicitly setting to null/empty, delete old image
-        if (existingPressRelease.image && 
-            typeof existingPressRelease.image === 'string' && 
-            existingPressRelease.image.startsWith('http')) {
-          await deleteImageFromCloudinary(existingPressRelease.image);
-        }
-        processedImage = null;
+if (image && typeof image === 'string' && image.startsWith('data:')) {
+  console.log('Processing new image for update...');
+  console.log('Image type:', typeof image);
+  console.log('Image data length:', image.length);
+  
+  try {
+    const processedImages = await processImages([image]);
+    console.log('processImages result:', processedImages);
+    
+    if (processedImages && processedImages.length > 0) {
+      console.log('New image processed successfully:', processedImages[0]);
+      
+      if (existingPressRelease.image && 
+          typeof existingPressRelease.image === 'string' && 
+          existingPressRelease.image.startsWith('http')) {
+        console.log('Deleting old image:', existingPressRelease.image);
+        await deleteImageFromCloudinary(existingPressRelease.image);
       }
+      
+      processedImage = processedImages[0];
+      console.log('Updated image URL:', processedImage);
+    } else {
+      console.warn('Image processing returned no results');
     }
+  } catch (imageError) {
+    console.error('Image processing error:', imageError);
+    throw new Error(`Image processing failed: ${imageError.message}`);
+  }
+}
 
     const updatedPressRelease = await PressRelease.findByIdAndUpdate(
       id,
